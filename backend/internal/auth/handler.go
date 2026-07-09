@@ -301,7 +301,10 @@ func (h *Handler) RegisterWithPassword(c *gin.Context) {
 		case AUTH_USER_EXISTS:
 			httpx.JSON(c, http.StatusConflict, "VALIDATION_ERROR", "用户已存在", nil)
 			return
-		case AUTH_PASSWORD_WEAK, AUTH_PROFILE_BAD_INPUT:
+		case AUTH_PASSWORD_WEAK:
+			httpx.JSON(c, http.StatusBadRequest, AUTH_PASSWORD_WEAK, "密码至少 8 位", nil)
+			return
+		case AUTH_PROFILE_BAD_INPUT:
 			httpx.JSON(c, http.StatusBadRequest, "VALIDATION_ERROR", "请求参数不合法", nil)
 			return
 		default:

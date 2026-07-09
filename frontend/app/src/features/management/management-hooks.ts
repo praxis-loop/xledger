@@ -26,6 +26,13 @@ import {
 } from './management-api'
 
 type CategoryListCache = PaginatedResponse<CategoryItem>
+type ManagementOverviewOptions = {
+  enabled?: boolean
+  includeCategories?: boolean
+  includeTags?: boolean
+}
+
+export const MANAGEMENT_QUERY_STALE_TIME = 60_000
 
 function removeArchivedCategoryFromCache(current: CategoryListCache | undefined, categoryID: string) {
   if (!current?.items) return current
@@ -42,31 +49,38 @@ function removeArchivedCategoryFromCache(current: CategoryListCache | undefined,
   }
 }
 
-export function useManagementOverview() {
+export function useManagementOverview(options?: ManagementOverviewOptions) {
   const { session } = useAuth()
+  const enabled = Boolean(session?.accessToken) && options?.enabled !== false
+  const includeCategories = options?.includeCategories !== false
+  const includeTags = options?.includeTags !== false
 
   const accountsQuery = useQuery({
     queryKey: ['management', 'accounts'],
     queryFn: () => getAccounts(session!.accessToken),
-    enabled: Boolean(session?.accessToken),
+    enabled,
+    staleTime: MANAGEMENT_QUERY_STALE_TIME,
   })
 
   const ledgersQuery = useQuery({
     queryKey: ['management', 'ledgers'],
     queryFn: () => getLedgers(session!.accessToken),
-    enabled: Boolean(session?.accessToken),
+    enabled,
+    staleTime: MANAGEMENT_QUERY_STALE_TIME,
   })
 
   const categoriesQuery = useQuery({
     queryKey: ['management', 'categories'],
     queryFn: () => getCategories(session!.accessToken),
-    enabled: Boolean(session?.accessToken),
+    enabled: enabled && includeCategories,
+    staleTime: MANAGEMENT_QUERY_STALE_TIME,
   })
 
   const tagsQuery = useQuery({
     queryKey: ['management', 'tags'],
     queryFn: () => getTags(session!.accessToken),
-    enabled: Boolean(session?.accessToken),
+    enabled: enabled && includeTags,
+    staleTime: MANAGEMENT_QUERY_STALE_TIME,
   })
 
   return { accountsQuery, ledgersQuery, categoriesQuery, tagsQuery }

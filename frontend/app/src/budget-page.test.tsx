@@ -27,7 +27,10 @@ function renderBudgetApp() {
   return render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <MemoryRouter initialEntries={['/budgets']}>
+        <MemoryRouter
+          initialEntries={['/budgets']}
+          future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+        >
           <App />
         </MemoryRouter>
       </AuthProvider>

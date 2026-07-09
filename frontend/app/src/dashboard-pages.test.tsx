@@ -1,10 +1,59 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import App from './App'
 import { AuthProvider } from './features/auth/auth-context'
 
 const originalFetch = global.fetch
+
+function getTransactionSupportResponse(url: string) {
+  if (url.endsWith('/api/accounts') || url.endsWith('/api/ledgers')) {
+    return new Response(
+      JSON.stringify({
+        code: 'OK',
+        message: 'Success',
+        data: { items: [{ id: 'ledger-1', name: 'Main' }], pagination: { page: 1, page_size: 20, total: 1, total_pages: 1 } },
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+
+  if (url.endsWith('/api/categories') || url.endsWith('/api/tags')) {
+    return new Response(
+      JSON.stringify({
+        code: 'OK',
+        message: 'Success',
+        data: { items: [], pagination: { page: 1, page_size: 20, total: 0, total_pages: 0 } },
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+
+  if (url.includes('/api/transactions/review-summary')) {
+    return new Response(
+      JSON.stringify({
+        code: 'OK',
+        message: 'Success',
+        data: { total: 0, uncategorized: 0, duplicate: 0, large: 0 },
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+
+  if (url.includes('/api/transactions/review-items')) {
+    return new Response(
+      JSON.stringify({
+        code: 'OK',
+        message: 'Success',
+        data: { items: [], pagination: { page: 1, page_size: 20, total: 0, total_pages: 0 } },
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+
+  return null
+}
 
 function renderProtectedApp(initialEntries: string[]) {
   window.localStorage.setItem(
@@ -23,15 +72,20 @@ function renderProtectedApp(initialEntries: string[]) {
     },
   })
 
-  return render(
+  const view = render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <MemoryRouter initialEntries={initialEntries}>
+        <MemoryRouter
+          initialEntries={initialEntries}
+          future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+        >
           <App />
         </MemoryRouter>
       </AuthProvider>
     </QueryClientProvider>,
   )
+
+  return { ...view, queryClient }
 }
 
 describe('dashboard and analytics pages', () => {
@@ -79,6 +133,50 @@ describe('dashboard and analytics pages', () => {
         )
       }
 
+      if (url.endsWith('/api/accounts') || url.endsWith('/api/ledgers')) {
+        return new Response(
+          JSON.stringify({
+            code: 'OK',
+            message: 'Success',
+            data: { items: [{ id: 'ledger-1', name: 'Main' }], pagination: { page: 1, page_size: 20, total: 1, total_pages: 1 } },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        )
+      }
+
+      if (url.endsWith('/api/categories') || url.endsWith('/api/tags')) {
+        return new Response(
+          JSON.stringify({
+            code: 'OK',
+            message: 'Success',
+            data: { items: [], pagination: { page: 1, page_size: 20, total: 0, total_pages: 0 } },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        )
+      }
+
+      if (url.includes('/api/transactions/review-summary')) {
+        return new Response(
+          JSON.stringify({
+            code: 'OK',
+            message: 'Success',
+            data: { total: 0, uncategorized: 0, duplicate: 0, large: 0 },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        )
+      }
+
+      if (url.includes('/api/transactions/review-items')) {
+        return new Response(
+          JSON.stringify({
+            code: 'OK',
+            message: 'Success',
+            data: { items: [], pagination: { page: 1, page_size: 20, total: 0, total_pages: 0 } },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        )
+      }
+
       if (url.includes('/api/transactions?')) {
         return new Response(
           JSON.stringify({
@@ -113,6 +211,11 @@ describe('dashboard and analytics pages', () => {
         )
       }
 
+      const transactionSupportResponse = getTransactionSupportResponse(url)
+      if (transactionSupportResponse) {
+        return transactionSupportResponse
+      }
+
       throw new Error(`Unexpected URL: ${url}`)
     })
     global.fetch = fetchMock as typeof fetch
@@ -129,6 +232,8 @@ describe('dashboard and analytics pages', () => {
       expect(screen.getByText(/expense:/i)).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /mar.*activity/i })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /apr.*no activity/i })).toBeInTheDocument()
+      expect(screen.getByTestId('dashboard-trend-scroll')).toHaveClass('overflow-x-auto')
+      expect(screen.getByTestId('dashboard-trend-grid')).toHaveClass('min-w-max')
       expect(screen.getByRole('heading', { name: /action center/i })).toBeInTheDocument()
       expect(screen.getByText(/2 items need review/i)).toBeInTheDocument()
       expect(screen.getByText(/top expense/i)).toBeInTheDocument()
@@ -172,6 +277,50 @@ describe('dashboard and analytics pages', () => {
                 { bucket_start: '2026-05-01T00:00:00Z', income: 80, expense: 20 },
               ],
             },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        )
+      }
+
+      if (url.endsWith('/api/accounts') || url.endsWith('/api/ledgers')) {
+        return new Response(
+          JSON.stringify({
+            code: 'OK',
+            message: 'Success',
+            data: { items: [{ id: 'ledger-1', name: 'Main' }], pagination: { page: 1, page_size: 20, total: 1, total_pages: 1 } },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        )
+      }
+
+      if (url.endsWith('/api/categories') || url.endsWith('/api/tags')) {
+        return new Response(
+          JSON.stringify({
+            code: 'OK',
+            message: 'Success',
+            data: { items: [], pagination: { page: 1, page_size: 20, total: 0, total_pages: 0 } },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        )
+      }
+
+      if (url.includes('/api/transactions/review-summary')) {
+        return new Response(
+          JSON.stringify({
+            code: 'OK',
+            message: 'Success',
+            data: { total: 0, uncategorized: 0, duplicate: 0, large: 0 },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        )
+      }
+
+      if (url.includes('/api/transactions/review-items')) {
+        return new Response(
+          JSON.stringify({
+            code: 'OK',
+            message: 'Success',
+            data: { items: [], pagination: { page: 1, page_size: 20, total: 0, total_pages: 0 } },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         )
@@ -330,8 +479,6 @@ describe('dashboard and analytics pages', () => {
   })
 
   it('shows selected dashboard month transactions and opens the same range in transactions', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true })
-    vi.setSystemTime(new Date('2026-05-06T10:15:00'))
     const expectedFrom = new Date(2026, 4, 1, 0, 0, 0, 0).toISOString()
     const expectedTo = new Date(2026, 4, 31, 23, 59, 59, 999).toISOString()
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
@@ -396,14 +543,20 @@ describe('dashboard and analytics pages', () => {
         )
       }
 
+      const transactionSupportResponse = getTransactionSupportResponse(url)
+      if (transactionSupportResponse) {
+        return transactionSupportResponse
+      }
+
       throw new Error(`Unexpected URL: ${url}`)
     })
     global.fetch = fetchMock as typeof fetch
 
-    renderProtectedApp(['/dashboard'])
+    const { queryClient } = renderProtectedApp(['/dashboard'])
+    const user = userEvent.setup()
 
     expect(await screen.findByText('Dashboard lunch')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /open selected month transactions/i }))
+    await user.click(screen.getByRole('button', { name: /open selected month transactions/i }))
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /transactions/i })).toBeInTheDocument()
@@ -417,6 +570,9 @@ describe('dashboard and analytics pages', () => {
           url.searchParams.get('date_to') === expectedTo
         )
       })).toBe(true)
+    })
+    await waitFor(() => {
+      expect(queryClient.isFetching()).toBe(0)
     })
   })
 
@@ -499,6 +655,8 @@ describe('dashboard and analytics pages', () => {
       expect(screen.getAllByText('Travel').length).toBeGreaterThan(0)
       expect(screen.getAllByText('¥1,800.00').length).toBeGreaterThan(0)
       expect(screen.getByText('Coffee')).toBeInTheDocument()
+      expect(screen.getByTestId('analytics-rhythm-scroll')).toHaveClass('overflow-x-auto')
+      expect(screen.getByTestId('analytics-rhythm-grid')).toHaveClass('min-w-max')
     })
   })
 

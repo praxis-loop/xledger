@@ -635,12 +635,12 @@ export function AnalyticsPage() {
           </div>
 
           {barsByBucket.length > 0 ? (
-            <div className="mt-6 overflow-x-auto pb-2">
+            <div data-testid="analytics-rhythm-scroll" className="mt-6 max-w-full overflow-x-auto overscroll-x-contain pb-2">
               <div
-                className="grid h-[260px] items-end gap-1 md:h-[320px] md:gap-2"
+                data-testid="analytics-rhythm-grid"
+                className="grid h-[260px] min-w-max items-end gap-1 pr-1 md:h-[320px] md:gap-2"
                 style={{
                   gridTemplateColumns: `repeat(${barsByBucket.length}, minmax(${mode === 'year' ? '58px' : '36px'}, 1fr))`,
-                  minWidth: mode === 'year' ? '720px' : `${Math.max(760, barsByBucket.length * 44)}px`,
                 }}
               >
                 {barsByBucket.map((point) => {

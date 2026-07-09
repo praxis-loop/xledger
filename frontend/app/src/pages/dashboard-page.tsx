@@ -408,8 +408,8 @@ export function DashboardPage() {
             </div>
           </div>
 
-          <div className="mt-8 overflow-x-auto pb-2">
-            <div className="grid h-[360px] min-w-[720px] grid-cols-12 items-end gap-3">
+          <div data-testid="dashboard-trend-scroll" className="mt-8 max-w-full overflow-x-auto overscroll-x-contain pb-2">
+            <div data-testid="dashboard-trend-grid" className="grid h-[360px] min-w-max grid-cols-12 items-end gap-3 pr-1 [grid-template-columns:repeat(12,minmax(52px,1fr))] md:[grid-template-columns:repeat(12,minmax(64px,1fr))]">
               {bars.map((bar) => {
               const incomeHeight = bar.total > 0 ? Math.round((bar.income / maxTotal) * 100) : 0
               const expenseHeight = bar.total > 0 ? Math.round((bar.expense / maxTotal) * 100) : 0

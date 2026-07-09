@@ -18,7 +18,7 @@ function renderShell(content: React.ReactNode) {
   return render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <MemoryRouter>
+        <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
           <AppShell>{content}</AppShell>
         </MemoryRouter>
       </AuthProvider>

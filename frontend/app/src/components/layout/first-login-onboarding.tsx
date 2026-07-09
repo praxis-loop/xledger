@@ -27,9 +27,12 @@ export function FirstLoginOnboarding() {
   const location = useLocation()
   const navigate = useNavigate()
   const { session } = useAuth()
-  const { accountsQuery, ledgersQuery } = useManagementOverview()
-  const transactionsQuery = useTransactionsWithOptions({ page: 1, pageSize: 1 })
   const [dismissed, setDismissed] = useState(true)
+  const shouldEvaluate = !['/login', '/auth/google/callback'].includes(location.pathname)
+  const isSetupRoute = ['/accounts', '/transactions'].some(
+    (path) => location.pathname === path || location.pathname.startsWith(`${path}/`),
+  )
+  const shouldLoadSetupState = Boolean(session?.email) && shouldEvaluate && !isSetupRoute && !dismissed
 
   useEffect(() => {
     if (!session?.email) {
@@ -40,10 +43,12 @@ export function FirstLoginOnboarding() {
     setDismissed(window.localStorage.getItem(key) === '1')
   }, [session?.email])
 
-  const shouldEvaluate = !['/login', '/auth/google/callback'].includes(location.pathname)
-  const isSetupRoute = ['/accounts', '/transactions'].some(
-    (path) => location.pathname === path || location.pathname.startsWith(`${path}/`),
-  )
+  const { accountsQuery, ledgersQuery } = useManagementOverview({
+    enabled: shouldLoadSetupState,
+    includeCategories: false,
+    includeTags: false,
+  })
+  const transactionsQuery = useTransactionsWithOptions({ page: 1, pageSize: 1, enabled: shouldLoadSetupState })
   const accountsCount = getItemCount(accountsQuery.data)
   const ledgersCount = getItemCount(ledgersQuery.data)
   const transactionsCount = getItemCount(transactionsQuery.data)
@@ -78,19 +83,24 @@ export function FirstLoginOnboarding() {
   }
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/45 p-4">
-      <div className="w-full max-w-2xl rounded-3xl border border-outline/15 bg-white p-6 shadow-ambient md:p-7">
-        <p className="font-label text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
-          {t('layout.firstLogin.eyebrow')}
-        </p>
-        <h2 className="mt-3 font-headline text-3xl font-extrabold tracking-tight text-on-surface">
-          {t('layout.firstLogin.title')}
-        </h2>
-        <p className="mt-3 text-sm text-on-surface-variant">
-          {t('layout.firstLogin.description')}
-        </p>
+    <section
+      aria-labelledby="first-login-onboarding-title"
+      className="mb-4 rounded-2xl border border-primary/15 bg-white p-4 shadow-sm md:mb-5 md:p-5"
+    >
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div className="min-w-0">
+          <p className="font-label text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+            {t('layout.firstLogin.eyebrow')}
+          </p>
+          <h2 id="first-login-onboarding-title" className="mt-2 font-headline text-2xl font-extrabold tracking-tight text-on-surface md:text-3xl">
+            {t('layout.firstLogin.title')}
+          </h2>
+          <p className="mt-2 max-w-[62ch] text-sm text-on-surface-variant">
+            {t('layout.firstLogin.description')}
+          </p>
+        </div>
 
-        <div className="mt-5 rounded-2xl border border-outline/10 bg-surface-container-low p-4">
+        <div className="min-w-0 flex-1 rounded-xl border border-outline/10 bg-surface-container-low p-3 md:p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
               {t('layout.firstLogin.checklistTitle')}
@@ -121,30 +131,30 @@ export function FirstLoginOnboarding() {
           </div>
           <p className="mt-3 text-xs text-on-surface-variant">{t('layout.firstLogin.tip')}</p>
         </div>
-
-        <div className="mt-6 grid gap-2 sm:grid-cols-3">
-          <Button
-            className="px-3 py-2 text-sm"
-            onClick={() => {
-              void navigate('/accounts')
-            }}
-          >
-            {t('layout.firstLogin.setUpAccounts')}
-          </Button>
-          <Button
-            className="px-3 py-2 text-sm"
-            variant="secondary"
-            onClick={() => {
-              void navigate('/transactions')
-            }}
-          >
-            {t('layout.firstLogin.addTransaction')}
-          </Button>
-          <Button className="px-3 py-2 text-sm" variant="ghost" onClick={dismiss}>
-            {t('layout.firstLogin.skip')}
-          </Button>
-        </div>
       </div>
-    </div>
+
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+        <Button
+          className="px-3 py-2 text-sm"
+          onClick={() => {
+            void navigate('/accounts')
+          }}
+        >
+          {t('layout.firstLogin.setUpAccounts')}
+        </Button>
+        <Button
+          className="px-3 py-2 text-sm"
+          variant="secondary"
+          onClick={() => {
+            void navigate('/transactions')
+          }}
+        >
+          {t('layout.firstLogin.addTransaction')}
+        </Button>
+        <Button className="px-3 py-2 text-sm sm:ml-auto" variant="ghost" onClick={dismiss}>
+          {t('layout.firstLogin.skip')}
+        </Button>
+      </div>
+    </section>
   )
 }

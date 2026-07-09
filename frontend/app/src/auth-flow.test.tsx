@@ -18,7 +18,10 @@ function renderApp(initialEntries: string[]) {
   return render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <MemoryRouter initialEntries={initialEntries}>
+        <MemoryRouter
+          initialEntries={initialEntries}
+          future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+        >
           <App />
         </MemoryRouter>
       </AuthProvider>
@@ -170,6 +173,27 @@ describe('auth flow', () => {
     await waitFor(() => {
       expect(screen.getByText(/password.user@example.com/i)).toBeInTheDocument()
     })
+  })
+
+  it('explains short registration passwords before submitting', async () => {
+    const fetchMock = vi.fn(async () => {
+      throw new Error('short password should not be submitted')
+    })
+    global.fetch = fetchMock as typeof fetch
+
+    renderApp(['/login'])
+    await waitForLoginForm()
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: /password/i }))
+    await user.click(screen.getByRole('button', { name: /register/i }))
+    await user.type(screen.getByLabelText(/email address/i), 'short.password@example.com')
+    await user.type(screen.getByLabelText(/^password$/i), '123456')
+    await user.type(screen.getByLabelText(/confirm password/i), '123456')
+    await user.click(screen.getByRole('button', { name: /create account/i }))
+
+    expect(await screen.findByText(/password must be at least 8 characters/i)).toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalledWith(expect.stringMatching('/api/auth/register'), expect.anything())
   })
 
   it('changes password when password fields are filled and profile is saved', async () => {

@@ -1,4 +1,4 @@
-import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Download, FileDown, Search, Trash2, Undo2, Upload } from 'lucide-react'
+import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Download, FileDown, Search, SlidersHorizontal, Trash2, Undo2, Upload } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -466,6 +466,7 @@ export function TransactionsPage() {
   const initialQuickFilter: QuickFilter = smartParam === 'review' ? 'review' : 'all'
   const [quickFilter, setQuickFilter] = useState<QuickFilter>(initialQuickFilter)
   const [reviewReasonFilter, setReviewReasonFilter] = useState<ReviewReasonFilter>('all')
+  const [mobileFiltersExpanded, setMobileFiltersExpanded] = useState(false)
   const [deletedTransactionIds, setDeletedTransactionIds] = useState<Set<string>>(() => new Set())
   const [dismissedReviewIds, setDismissedReviewIds] = useState<Set<string>>(() => new Set())
   const [pendingUndo, setPendingUndo] = useState<TransactionRecord | null>(null)
@@ -1213,31 +1214,42 @@ export function TransactionsPage() {
                   </button>
                 ))}
               </div>
-              <div className="mb-4 flex flex-wrap items-center gap-2 border-t border-outline/10 pt-4">
-                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
-                  {t('transactionsPage.reviewFocus.title')}
-                </span>
-                {reviewReasonFilters.map((filter) => (
-                  <button
-                    key={filter.id}
-                    type="button"
-                    aria-label={t(`transactionsPage.reviewFocus.ariaLabels.${filter.id}`)}
-                    aria-pressed={reviewReasonFilter === filter.id}
-                    className={`min-h-10 rounded-full border px-3 py-2 text-[11px] font-bold transition ${
-                      reviewReasonFilter === filter.id
-                        ? 'border-primary bg-white text-primary shadow-sm'
-                        : 'border-outline/15 bg-white/70 text-on-surface-variant hover:border-primary/30 hover:text-primary'
-                    }`}
-                    onClick={() => {
-                      setQuickFilter('review')
-                      setReviewReasonFilter(filter.id)
-                    }}
-                  >
-                    {filter.label} · {filter.count}
-                  </button>
-                ))}
-              </div>
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+              <button
+                type="button"
+                className="mb-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-outline/15 bg-white px-3 py-2 text-xs font-bold text-on-surface-variant shadow-sm transition hover:border-primary/30 hover:text-primary md:hidden"
+                aria-controls="transaction-advanced-filters"
+                aria-expanded={mobileFiltersExpanded}
+                onClick={() => setMobileFiltersExpanded((current) => !current)}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                {mobileFiltersExpanded ? t('transactionsPage.filters.hideAdvanced') : t('transactionsPage.filters.showAdvanced')}
+              </button>
+              <div id="transaction-advanced-filters" className={`${mobileFiltersExpanded ? 'block' : 'hidden'} md:block`}>
+                <div className="mb-4 flex flex-wrap items-center gap-2 border-t border-outline/10 pt-4">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
+                    {t('transactionsPage.reviewFocus.title')}
+                  </span>
+                  {reviewReasonFilters.map((filter) => (
+                    <button
+                      key={filter.id}
+                      type="button"
+                      aria-label={t(`transactionsPage.reviewFocus.ariaLabels.${filter.id}`)}
+                      aria-pressed={reviewReasonFilter === filter.id}
+                      className={`min-h-10 rounded-full border px-3 py-2 text-[11px] font-bold transition ${
+                        reviewReasonFilter === filter.id
+                          ? 'border-primary bg-white text-primary shadow-sm'
+                          : 'border-outline/15 bg-white/70 text-on-surface-variant hover:border-primary/30 hover:text-primary'
+                      }`}
+                      onClick={() => {
+                        setQuickFilter('review')
+                        setReviewReasonFilter(filter.id)
+                      }}
+                    >
+                      {filter.label} · {filter.count}
+                    </button>
+                  ))}
+                </div>
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
                 <label className="space-y-2">
                   <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
                     {t('transactionsPage.filters.searchLedger')}
@@ -1332,6 +1344,7 @@ export function TransactionsPage() {
                     onChange={(event) => setAmountMaxFilter(event.target.value)}
                   />
                 </label>
+                </div>
               </div>
             </article>
 

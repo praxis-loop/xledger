@@ -17,7 +17,10 @@ function renderGoogleCallbackPage(initialEntry: string) {
   return render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <MemoryRouter initialEntries={[initialEntry]}>
+        <MemoryRouter
+          initialEntries={[initialEntry]}
+          future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+        >
           <Routes>
             <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
           </Routes>

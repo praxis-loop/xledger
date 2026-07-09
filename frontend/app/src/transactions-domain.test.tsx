@@ -25,15 +25,20 @@ function renderTransactionsApp(initialEntries: string[]) {
     },
   })
 
-  return render(
+  const view = render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <MemoryRouter initialEntries={initialEntries}>
+        <MemoryRouter
+          initialEntries={initialEntries}
+          future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+        >
           <App />
         </MemoryRouter>
       </AuthProvider>
     </QueryClientProvider>,
   )
+
+  return { ...view, queryClient }
 }
 
 function renderCreateTransactionProbe(queryClient: QueryClient) {
@@ -390,6 +395,26 @@ describe('transactions domain', () => {
       expect(screen.getByText(/daily summary/i)).toBeInTheDocument()
       expect(screen.getByText(/month summary/i)).toBeInTheDocument()
     })
+  })
+
+  it('stores transaction form options in the shared management query cache', async () => {
+    const fetchMock = createTransactionsFetchMock()
+    global.fetch = fetchMock as typeof fetch
+
+    const { queryClient } = renderTransactionsApp(['/transactions'])
+
+    await screen.findByText('Food')
+
+    await waitFor(() => {
+      expect(queryClient.getQueryData(['management', 'accounts'])).toBeTruthy()
+      expect(queryClient.getQueryData(['management', 'ledgers'])).toBeTruthy()
+      expect(queryClient.getQueryData(['management', 'categories'])).toBeTruthy()
+      expect(queryClient.getQueryData(['management', 'tags'])).toBeTruthy()
+    })
+
+    for (const path of ['/api/accounts', '/api/ledgers', '/api/categories', '/api/tags']) {
+      expect(fetchMock.mock.calls.filter(([input]) => new URL(String(input), 'http://localhost').pathname === path)).toHaveLength(1)
+    }
   })
 
   it('loads the transaction list without a default date range filter', async () => {

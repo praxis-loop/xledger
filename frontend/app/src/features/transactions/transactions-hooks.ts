@@ -1,5 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/features/auth/auth-context'
+import { MANAGEMENT_QUERY_STALE_TIME } from '@/features/management/management-hooks'
 import {
   confirmImport,
   createTransaction,
@@ -109,27 +110,31 @@ export function useTransactionFormOptions() {
   const { session } = useAuth()
 
   const accountsQuery = useQuery({
-    queryKey: ['transactions', 'accounts'],
+    queryKey: ['management', 'accounts'],
     queryFn: () => getAccounts(session!.accessToken),
     enabled: Boolean(session?.accessToken),
+    staleTime: MANAGEMENT_QUERY_STALE_TIME,
   })
 
   const ledgersQuery = useQuery({
-    queryKey: ['transactions', 'ledgers'],
+    queryKey: ['management', 'ledgers'],
     queryFn: () => getLedgers(session!.accessToken),
     enabled: Boolean(session?.accessToken),
+    staleTime: MANAGEMENT_QUERY_STALE_TIME,
   })
 
   const categoriesQuery = useQuery({
-    queryKey: ['transactions', 'categories'],
+    queryKey: ['management', 'categories'],
     queryFn: () => getCategories(session!.accessToken),
     enabled: Boolean(session?.accessToken),
+    staleTime: MANAGEMENT_QUERY_STALE_TIME,
   })
 
   const tagsQuery = useQuery({
-    queryKey: ['transactions', 'tags'],
+    queryKey: ['management', 'tags'],
     queryFn: () => getTags(session!.accessToken),
     enabled: Boolean(session?.accessToken),
+    staleTime: MANAGEMENT_QUERY_STALE_TIME,
   })
 
   return {

@@ -77,6 +77,8 @@
       "signInWithPassword": "Sign In with Password",
       "createAccount": "Create Account",
       "passwordMismatch": "Passwords do not match.",
+      "passwordTooShort": "Password must be at least {{count}} characters.",
+      "passwordRequirement": "Use at least {{count}} characters.",
       "verifyAndContinue": "Verify and Continue",
       "sendVerificationCode": "Send Verification Code",
       "continueWithGoogle": "Continue with Google",
@@ -349,7 +351,9 @@
       "last120Days": "Last 120 Days",
       "last365Days": "Last 365 Days",
       "amountMin": "Minimum Amount",
-      "amountMax": "Maximum Amount"
+      "amountMax": "Maximum Amount",
+      "showAdvanced": "Filters",
+      "hideAdvanced": "Hide Filters"
     },
     "table": {
       "select": "Select",

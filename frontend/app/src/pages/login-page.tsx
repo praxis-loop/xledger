@@ -9,6 +9,8 @@ import { ApiError } from '@/lib/api'
 type AuthMethod = 'code' | 'password'
 type PasswordIntent = 'login' | 'register'
 
+const PASSWORD_MIN_LENGTH = 8
+
 export function LoginPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -91,6 +93,12 @@ export function LoginPage() {
     if (passwordIntent === 'register' && password !== confirmPassword) {
       setPending(false)
       setError(t('auth.loginPage.passwordMismatch'))
+      return
+    }
+
+    if (passwordIntent === 'register' && password.trim().length < PASSWORD_MIN_LENGTH) {
+      setPending(false)
+      setError(t('auth.loginPage.passwordTooShort', { count: PASSWORD_MIN_LENGTH }))
       return
     }
 
@@ -245,6 +253,7 @@ export function LoginPage() {
 
                 <TextField
                   label={t('auth.loginPage.password')}
+                  helperText={passwordIntent === 'register' ? t('auth.loginPage.passwordRequirement', { count: PASSWORD_MIN_LENGTH }) : undefined}
                   type="password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}

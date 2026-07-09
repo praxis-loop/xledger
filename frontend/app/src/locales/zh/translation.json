@@ -82,6 +82,8 @@
       "signInWithPassword": "使用密码登录",
       "createAccount": "创建账号",
       "passwordMismatch": "两次输入的密码不一致。",
+      "passwordTooShort": "密码至少需要 {{count}} 位。",
+      "passwordRequirement": "请至少输入 {{count}} 位字符。",
       "passwordAuthFailed": "当前无法完成密码登录，请稍后重试。"
     },
     "googleCallback": {
@@ -349,7 +351,9 @@
       "last120Days": "最近 120 天",
       "last365Days": "最近 365 天",
       "amountMin": "最小金额",
-      "amountMax": "最大金额"
+      "amountMax": "最大金额",
+      "showAdvanced": "筛选",
+      "hideAdvanced": "收起筛选"
     },
     "table": {
       "select": "选择",

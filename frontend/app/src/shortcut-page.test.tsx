@@ -27,7 +27,10 @@ function renderShortcutApp() {
   return render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <MemoryRouter initialEntries={['/shortcut']}>
+        <MemoryRouter
+          initialEntries={['/shortcut']}
+          future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+        >
           <App />
         </MemoryRouter>
       </AuthProvider>

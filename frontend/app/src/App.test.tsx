@@ -18,7 +18,10 @@ function renderApp(initialEntries: string[]) {
   return render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <MemoryRouter initialEntries={initialEntries}>
+        <MemoryRouter
+          initialEntries={initialEntries}
+          future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+        >
           <App />
         </MemoryRouter>
       </AuthProvider>
@@ -230,7 +233,7 @@ describe('App shell', () => {
     expect(screen.getByRole('button', { name: /open xledger/i })).toBeInTheDocument()
   })
 
-  it('shows first-time onboarding when ledger setup is still empty', async () => {
+  it('shows first-time onboarding as an inline setup panel when ledger setup is still empty', async () => {
     global.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
 
@@ -312,11 +315,13 @@ describe('App shell', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /getting started/i })).toBeInTheDocument()
+      expect(screen.getByRole('region', { name: /getting started/i })).toBeInTheDocument()
       expect(screen.getByText(/setup checklist/i)).toBeInTheDocument()
       expect(screen.getByText(/create a balance source/i)).toBeInTheDocument()
       expect(screen.getByText(/record the first transaction/i)).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /set up accounts/i })).toBeInTheDocument()
     })
+    expect(document.querySelector('[data-testid="first-login-onboarding-modal"]')).not.toBeInTheDocument()
   })
 
   it('keeps onboarding visible as progress after the first account exists', async () => {
@@ -403,8 +408,51 @@ describe('App shell', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/1\/2 completed/i)).toBeInTheDocument()
+      expect(screen.getByRole('region', { name: /getting started/i })).toBeInTheDocument()
       expect(screen.getByText(/cash wallet/i)).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /add transaction/i })).toBeInTheDocument()
     })
+  })
+
+  it('reserves enough mobile bottom space for the fixed navigation', async () => {
+    global.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+
+      if (url.endsWith('/api/auth/me')) {
+        return new Response(
+          JSON.stringify({ code: 'OK', message: 'Success', data: { email: 'mobile-shell@example.com' } }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        )
+      }
+
+      if (url.includes('/api/stats/overview')) {
+        return new Response(
+          JSON.stringify({ code: 'OK', message: 'Success', data: { total_assets: 0, income: 0, expense: 0, net: 0 } }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        )
+      }
+
+      if (url.includes('/api/stats/trend?')) {
+        return new Response(
+          JSON.stringify({ code: 'OK', message: 'Success', data: { points: [] } }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        )
+      }
+
+      throw new Error(`Unexpected URL: ${url}`)
+    }) as typeof fetch
+
+    window.localStorage.setItem(
+      'xledger.auth',
+      JSON.stringify({
+        accessToken: 'access.mobile-shell.token',
+        refreshToken: 'refresh.mobile-shell.token',
+        email: 'mobile-shell@example.com',
+      }),
+    )
+
+    renderApp(['/dashboard'])
+
+    expect(await screen.findByRole('main')).toHaveClass('pb-mobile-nav')
   })
 })

@@ -150,6 +150,36 @@ func TestVerifyCode_IssuedRefreshTokenCompatibleWithSessionFlow(t *testing.T) {
 	}
 }
 
+func TestRegisterWithPassword_WeakPasswordReturnsActionableMessage(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	now := time.Date(2026, 3, 20, 12, 19, 0, 0, time.UTC)
+	repo := NewInMemoryRepository(func() time.Time { return now })
+	h := NewHandlerWithServices(
+		NewCodeService(repo, &oauthSessionSender{}, nil, func() time.Time { return now }, nil),
+		nil,
+		NewSessionService(repo, nil, func() time.Time { return now }),
+	)
+	h.SetPasswordService(NewPasswordService(repo))
+	r := gin.New()
+	r.POST("/api/auth/register", h.RegisterWithPassword)
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/api/auth/register",
+		strings.NewReader(`{"email":"weak-password@example.com","password":"123456","display_name":"Weak"}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected weak password status %d, got %d body=%s", http.StatusBadRequest, rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "密码至少 8 位") {
+		t.Fatalf("expected actionable weak password message, got body=%s", rec.Body.String())
+	}
+}
+
 func TestRefresh_RotationInvalidatesOldToken(t *testing.T) {
 	now := time.Date(2026, 3, 20, 12, 20, 0, 0, time.UTC)
 	repo := NewInMemoryRepository(func() time.Time { return now })
