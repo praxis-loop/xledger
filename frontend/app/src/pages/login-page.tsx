@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { TextField } from '@/components/ui/text-field'
 import { useAuth } from '@/features/auth/auth-context'
 import { ApiError } from '@/lib/api'
+import { cn } from '@/lib/utils'
 
 type AuthMethod = 'code' | 'password'
 type PasswordIntent = 'login' | 'register'
@@ -137,6 +138,20 @@ export function LoginPage() {
         ? t('auth.loginPage.createAccount')
         : t('auth.loginPage.signInWithPassword')
 
+  const authMethodButtonClass = (method: AuthMethod) =>
+    cn(
+      'rounded-xl px-3 py-2 text-sm font-semibold transition',
+      authMethod === method ? 'bg-primary text-white shadow-ambient' : 'text-on-surface-variant hover:text-on-surface',
+    )
+
+  const passwordIntentButtonClass = (intent: PasswordIntent) =>
+    cn(
+      'border-b-2 px-1 pb-2 text-sm font-semibold transition',
+      passwordIntent === intent
+        ? 'border-primary text-primary'
+        : 'border-transparent text-on-surface-variant hover:text-on-surface',
+    )
+
   return (
     <div className="min-h-screen bg-background text-on-surface lg:grid lg:grid-cols-[1.2fr_0.8fr]">
       <section className="hidden bg-primary px-12 py-16 text-white lg:flex lg:flex-col lg:justify-between">
@@ -147,19 +162,24 @@ export function LoginPage() {
           </p>
         </div>
         <div className="grid max-w-xl grid-cols-2 gap-4">
-          <div className="rounded-[28px] border border-white/10 bg-white/10 p-6 backdrop-blur-md">
+          <div className="rounded-3xl border border-white/10 bg-white/10 p-6 backdrop-blur-md">
             <p className="font-label text-[10px] uppercase tracking-[0.2em] text-primary-fixed">{t('auth.loginPage.liveCashFlow')}</p>
             <p className="mt-6 font-headline text-4xl font-bold">+24.8%</p>
           </div>
-          <div className="rounded-[28px] border border-white/10 bg-white/10 p-6 backdrop-blur-md">
+          <div className="rounded-3xl border border-white/10 bg-white/10 p-6 backdrop-blur-md">
             <p className="font-label text-[10px] uppercase tracking-[0.2em] text-primary-fixed">{t('auth.loginPage.syncedLedgers')}</p>
             <p className="mt-6 font-headline text-4xl font-bold">12</p>
           </div>
         </div>
       </section>
 
-      <main className="flex items-center justify-center px-6 py-12 sm:px-10 lg:px-16">
+      <main className="flex items-start justify-center px-6 py-10 sm:px-10 lg:items-center lg:px-16">
         <div className="w-full max-w-md space-y-8">
+          <div className="lg:hidden">
+            <p className="font-headline text-3xl font-black tracking-tight text-primary">xledger</p>
+            <p className="mt-1 text-sm font-medium text-on-surface-variant">{t('layout.brandTagline')}</p>
+          </div>
+
           <div>
             <p className="font-label text-[10px] font-bold uppercase tracking-[0.2em] text-primary">{t('auth.loginPage.secureAccess')}</p>
             <h1 className="mt-3 font-headline text-4xl font-extrabold tracking-tight text-on-surface">
@@ -170,21 +190,17 @@ export function LoginPage() {
             <p className="mt-3 text-sm text-on-surface-variant">{t('auth.loginPage.signInHint')}</p>
           </div>
 
-          <div className="inline-flex rounded-xl border border-outline/15 bg-surface-container p-1">
+          <div className="inline-flex rounded-2xl border border-outline/15 bg-surface-container p-1">
             <button
               type="button"
-              className={`rounded-lg px-3 py-2 text-sm ${
-                authMethod === 'code' ? 'bg-primary text-white' : 'text-on-surface-variant'
-              }`}
+              className={authMethodButtonClass('code')}
               onClick={() => switchAuthMethod('code')}
             >
               {t('auth.loginPage.authMethodCode')}
             </button>
             <button
               type="button"
-              className={`rounded-lg px-3 py-2 text-sm ${
-                authMethod === 'password' ? 'bg-primary text-white' : 'text-on-surface-variant'
-              }`}
+              className={authMethodButtonClass('password')}
               onClick={() => switchAuthMethod('password')}
             >
               {t('auth.loginPage.authMethodPassword')}
@@ -214,13 +230,11 @@ export function LoginPage() {
             ) : null}
 
             {authMethod === 'password' ? (
-              <div className="space-y-4">
-                <div className="inline-flex rounded-xl border border-outline/15 bg-surface-container p-1">
+              <div className="space-y-5">
+                <div className="flex gap-6 border-b border-outline/15">
                   <button
                     type="button"
-                    className={`rounded-lg px-3 py-2 text-sm ${
-                      passwordIntent === 'login' ? 'bg-primary text-white' : 'text-on-surface-variant'
-                    }`}
+                    className={passwordIntentButtonClass('login')}
                     onClick={() => {
                       setPasswordIntent('login')
                       setError(null)
@@ -230,9 +244,7 @@ export function LoginPage() {
                   </button>
                   <button
                     type="button"
-                    className={`rounded-lg px-3 py-2 text-sm ${
-                      passwordIntent === 'register' ? 'bg-primary text-white' : 'text-on-surface-variant'
-                    }`}
+                    className={passwordIntentButtonClass('register')}
                     onClick={() => {
                       setPasswordIntent('register')
                       setError(null)
@@ -257,7 +269,7 @@ export function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  placeholder={t('auth.loginPage.passwordPlaceholder')}
+                  placeholder={passwordIntent === 'register' ? undefined : t('auth.loginPage.passwordPlaceholder')}
                 />
 
                 {passwordIntent === 'register' ? (
@@ -274,7 +286,7 @@ export function LoginPage() {
 
             {error ? <p className="text-sm font-medium text-error">{error}</p> : null}
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-3">
               <Button className="w-full" type="submit" disabled={submitDisabled}>
                 {submitText}
               </Button>
