@@ -1,6 +1,9 @@
-# Default uses DaoCloud mirror of Docker Hub (same as docker-compose defaults). Override: --build-arg GOLANG_IMAGE=golang:1.22-alpine
+# Default uses DaoCloud mirror of Docker Hub (same as docker-compose defaults).
+# Override: --build-arg GOLANG_IMAGE=golang:1.22-alpine --build-arg GOPROXY=https://proxy.golang.org,direct
 ARG GOLANG_IMAGE=docker.m.daocloud.io/library/golang:1.22-alpine
 FROM ${GOLANG_IMAGE} AS builder
+ARG GOPROXY=https://proxy.golang.org,direct
+ENV GOPROXY=${GOPROXY}
 
 WORKDIR /app
 

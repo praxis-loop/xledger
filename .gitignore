@@ -20,3 +20,6 @@ backend/.env
 backend/config/config.yaml
 .qodo/
 .vite/
+backend/config/test.yaml
+backend/config/production.yaml
+deploy/.env
