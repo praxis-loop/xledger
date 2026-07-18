@@ -45,6 +45,10 @@ jobs:
             script: e2e:classification
           - spec: pat
             script: e2e:pat
+          - spec: quality-visual
+            script: e2e:visual
+          - spec: quality-a11y
+            script: e2e:a11y
 
     env:
       CI: "true"
@@ -75,9 +79,17 @@ jobs:
 
       - name: Install e2e dependencies
         working-directory: e2e-tests
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm exec playwright install --with-deps chromium
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        if: ${{ !startsWith(matrix.spec, 'quality-') }}
+        working-directory: e2e-tests
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Install quality browsers
+        if: ${{ startsWith(matrix.spec, 'quality-') }}
+        working-directory: e2e-tests
+        run: pnpm exec playwright install --with-deps chromium webkit
 
       - name: Start deploy stack
         working-directory: deploy

@@ -222,6 +222,15 @@
   "layout": {
     "brandTagline": "Financial Precision",
     "primaryNavigation": "Primary",
+    "mobileNavigation": "Mobile navigation",
+    "mobileTabs": {
+      "home": "Home",
+      "entries": "Entries",
+      "reports": "Reports",
+      "accounts": "Accounts",
+      "import": "Import",
+      "settings": "Settings"
+    },
     "routeFallback": "Loading...",
     "authGuard": {
       "syncing": "Syncing your ledger..."

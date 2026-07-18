@@ -13,7 +13,13 @@ start their own PostgreSQL container.
 From the repository root:
 
 ```bash
-git pull --ff-only
+git switch main
+git fetch origin main
+PREVIOUS_SHA="$(git rev-parse HEAD)"
+printf '%s\n' "$PREVIOUS_SHA" > .git/deploy-previous-sha
+DEPLOY_SHA="$(git rev-parse origin/main)"
+git merge --ff-only "$DEPLOY_SHA"
+test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
 sudo docker compose -f deploy/docker-compose.dev.yaml up -d --build
 ```
 
@@ -23,6 +29,16 @@ Verify the deployment:
 sudo docker compose -f deploy/docker-compose.dev.yaml ps
 curl -fsS http://127.0.0.1:8080/healthz
 curl -fsSI http://127.0.0.1:4174/
+```
+
+If verification fails, restore the persisted previous revision and rebuild:
+
+```bash
+PREVIOUS_SHA="$(cat .git/deploy-previous-sha)"
+test -z "$(git status --porcelain)"
+git switch -C main "$PREVIOUS_SHA"
+test "$(git rev-parse HEAD)" = "$PREVIOUS_SHA"
+sudo docker compose -f deploy/docker-compose.dev.yaml up -d --build
 ```
 
 ## Configuration

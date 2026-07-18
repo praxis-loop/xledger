@@ -42,9 +42,9 @@ export default {
         'on-error-container': '#93000a',
       },
       fontFamily: {
-        headline: ['Manrope', 'Inter', 'Microsoft YaHei', 'PingFang SC', 'Noto Sans CJK SC', 'Source Han Sans SC', 'sans-serif'],
-        body: ['Inter', 'Microsoft YaHei', 'PingFang SC', 'Noto Sans CJK SC', 'Source Han Sans SC', 'sans-serif'],
-        label: ['Inter', 'Microsoft YaHei', 'PingFang SC', 'Noto Sans CJK SC', 'Source Han Sans SC', 'sans-serif'],
+        headline: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'PingFang SC', 'Microsoft YaHei', 'sans-serif'],
+        body: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Text', 'PingFang SC', 'Microsoft YaHei', 'sans-serif'],
+        label: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Text', 'PingFang SC', 'Microsoft YaHei', 'sans-serif'],
       },
       boxShadow: {
         ambient: '0 10px 24px rgba(25, 28, 30, 0.055)',

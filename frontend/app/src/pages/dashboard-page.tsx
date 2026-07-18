@@ -6,6 +6,8 @@ import type { TransactionRecord } from '@/features/transactions/transactions-api
 import { useTransactionsWithOptions } from '@/features/transactions/transactions-hooks'
 import { buildReviewSummary } from '@/features/transactions/review-rules'
 import { formatCurrency } from '@/lib/format'
+import { DashboardMetricCard } from '@/components/ui/dashboard-metric-card'
+import { SegmentedControl } from '@/components/ui/segmented-control'
 
 const periods = ['today', 'week', 'month', 'year'] as const
 
@@ -274,89 +276,73 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-2xl border border-outline/15 bg-surface-container-lowest p-5 shadow-ambient md:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <section>
+        <div className="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-start md:justify-between">
           <div>
-            <h2 className="font-headline text-4xl font-extrabold leading-tight text-on-surface md:text-[44px]">
+            <h2 className="font-headline text-[34px] font-bold leading-tight tracking-normal text-on-surface md:text-[44px] md:font-extrabold">
               {t('dashboard.title')}
             </h2>
-            <p className="mt-2 text-sm text-on-surface-variant">{t('dashboard.subtitle')}</p>
+            <p className="mt-1.5 max-w-2xl text-[15px] leading-6 text-on-surface-variant md:mt-2 md:text-sm">
+              {t('dashboard.subtitle')}
+            </p>
           </div>
-          <div className="inline-flex rounded-xl border border-outline/15 bg-surface-container p-1">
-            {periods.map((item) => (
-              <button
-                key={item}
-                type="button"
-                className={`min-h-9 rounded-lg px-4 py-2 text-xs font-semibold transition ${
-                  period === item ? 'bg-white text-primary shadow-sm' : 'text-on-surface-variant hover:text-primary'
-                }`}
-                onClick={() => setPeriod(item)}
-              >
-                {t(`dashboard.periods.${item}`)}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl
+            ariaLabel={t('analytics.selectPeriod')}
+            value={period}
+            options={periods.map((item) => ({ value: item, label: t(`dashboard.periods.${item}`) }))}
+            onChange={setPeriod}
+          />
         </div>
 
-        <div className="mt-6 grid gap-4 xl:grid-cols-[1fr_1fr_0.95fr]">
-          <article className="rounded-2xl border border-[#67d79c]/70 bg-white p-5">
-            <div className="flex items-center justify-between text-xs font-bold uppercase tracking-[0.14em] text-on-surface-variant">
-              <span>{t(`dashboard.periods.${period}`)} {t('dashboard.income')}</span>
-              <span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] text-emerald-700">
-                {derived.incomeDelta}
-              </span>
-            </div>
-            <p className="mt-4 font-headline text-4xl font-extrabold text-on-surface">{formatCurrency(derived.income)}</p>
-            <div className="mt-5 h-[4px] w-[62%] rounded-full bg-emerald-500/90" />
-          </article>
-
-          <article className="rounded-2xl border border-[#f3a0a8]/70 bg-white p-5">
-            <div className="flex items-center justify-between text-xs font-bold uppercase tracking-[0.14em] text-on-surface-variant">
-              <span>{t(`dashboard.periods.${period}`)} {t('dashboard.expense')}</span>
-              <span className="rounded-full bg-rose-100 px-2 py-1 text-[10px] text-rose-700">
-                {derived.expenseDelta}
-              </span>
-            </div>
-            <p className="mt-4 font-headline text-4xl font-extrabold text-on-surface">
-              {formatCurrency(derived.expense)}
-            </p>
-            <div className="mt-5 h-[4px] w-[46%] rounded-full bg-rose-500/90" />
-          </article>
-
-          <article className="overflow-hidden rounded-2xl bg-primary p-5 text-white">
-            <div className="text-xs font-bold uppercase tracking-[0.14em] text-primary-fixed">{t('dashboard.totalAssets')}</div>
-            <p className="mt-4 font-headline text-4xl font-extrabold">
-              {formatCurrency(totalOverviewQuery.data?.total_assets ?? 0)}
-            </p>
-            <p className="mt-3 text-sm text-primary-fixed">
-              {t('dashboard.net')} <span>{formatCurrency(derived.net)}</span>
-            </p>
-            <p className="mt-1 text-xs text-primary-fixed">{t('dashboard.totalAssetsHint')}</p>
-            <p className="mt-4 text-xs text-primary-fixed">{t('dashboard.lastSynced')} {syncedLabel}</p>
-          </article>
+        <div className="mt-5 grid grid-cols-2 gap-3 md:mt-6 md:gap-4 xl:grid-cols-[1fr_1fr_0.95fr]">
+          <DashboardMetricCard
+            label={`${t(`dashboard.periods.${period}`)} ${t('dashboard.income')}`}
+            value={formatCurrency(derived.income)}
+            delta={derived.incomeDelta}
+            tone="positive"
+          />
+          <DashboardMetricCard
+            label={`${t(`dashboard.periods.${period}`)} ${t('dashboard.expense')}`}
+            value={formatCurrency(derived.expense)}
+            delta={derived.expenseDelta}
+            tone="negative"
+          />
+          <DashboardMetricCard
+            label={t('dashboard.totalAssets')}
+            value={formatCurrency(totalOverviewQuery.data?.total_assets ?? 0)}
+            tone="balance"
+            className="col-span-2 xl:col-span-1"
+            details={
+              <>
+                <p>{t('dashboard.net')} <span className="font-semibold">{formatCurrency(derived.net)}</span></p>
+                <p>{t('dashboard.totalAssetsHint')}</p>
+                <p className="mt-2">{t('dashboard.lastSynced')} {syncedLabel}</p>
+              </>
+            }
+          />
         </div>
 
-        <article className="mt-6 rounded-2xl border border-outline/15 bg-white p-5">
+        <article className="mt-5 rounded-lg border border-black/10 bg-white p-4 md:mt-6 md:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h3 className="font-headline text-2xl font-bold leading-tight text-on-surface">{t('dashboard.actionCenter.title')}</h3>
+              <h3 className="font-headline text-xl font-bold leading-tight tracking-normal text-on-surface md:text-2xl">{t('dashboard.actionCenter.title')}</h3>
               <p className="mt-1 text-sm text-on-surface-variant">{t('dashboard.actionCenter.description')}</p>
             </div>
             <button
               type="button"
-              className="min-h-10 rounded-xl border border-primary/20 bg-primary-fixed px-4 py-2 text-sm font-bold text-primary transition hover:bg-primary-fixed/80"
+              className="min-h-11 rounded-xl bg-[#eaf3ff] px-4 py-2 text-sm font-semibold text-[#0066cc] transition hover:bg-[#dbeaff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0066cc] motion-reduce:transition-none"
               onClick={() => navigate('/transactions?smart=review')}
             >
               {t('dashboard.actionCenter.reviewButton')}
             </button>
           </div>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            <div className="rounded-xl bg-surface-container-low p-4">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
+          <div className="mt-3 grid divide-y divide-black/10 border-t border-black/10 md:grid-cols-3 md:divide-x md:divide-y-0">
+            <div className="py-3 md:px-4 md:first:pl-0">
+              <p className="text-[11px] font-semibold text-on-surface-variant">
                 {t('dashboard.actionCenter.reviewLabel')}
               </p>
-              <p className="mt-2 text-lg font-extrabold text-on-surface">
+              <p className="mt-1.5 text-lg font-bold text-on-surface">
                 {t('dashboard.actionCenter.reviewCount', { count: actionCenter.reviewCount })}
               </p>
               <p className="mt-1 text-xs text-on-surface-variant">
@@ -366,22 +352,22 @@ export function DashboardPage() {
                 })}
               </p>
             </div>
-            <div className="rounded-xl bg-surface-container-low p-4">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
+            <div className="py-3 md:px-4">
+              <p className="text-[11px] font-semibold text-on-surface-variant">
                 {t('dashboard.actionCenter.topExpense')}
               </p>
-              <p className="mt-2 truncate text-lg font-extrabold text-on-surface">
+              <p className="mt-1.5 truncate text-lg font-bold text-on-surface">
                 {actionCenter.topExpense?.category_name ?? actionCenter.topExpense?.memo ?? t('transactionsPage.quickFilters.uncategorized')}
               </p>
-              <p className="mt-1 text-xs font-bold text-rose-600">
+              <p className="mt-1 text-xs font-semibold text-[#b4233c]">
                 {formatCurrency(Math.abs(actionCenter.topExpense?.amount ?? 0))}
               </p>
             </div>
-            <div className="rounded-xl bg-primary p-4 text-white">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-primary-fixed">
+            <div className="py-3 md:px-4 md:last:pr-0">
+              <p className="text-[11px] font-semibold text-on-surface-variant">
                 {t('dashboard.actionCenter.nextStep')}
               </p>
-              <p className="mt-2 text-sm font-semibold">
+              <p className="mt-1.5 text-sm font-semibold text-[#0066cc]">
                 {actionCenter.reviewCount > 0
                   ? t('dashboard.actionCenter.nextStepReview')
                   : t('dashboard.actionCenter.nextStepClear')}
@@ -390,10 +376,10 @@ export function DashboardPage() {
           </div>
         </article>
 
-        <article className="mt-6 rounded-2xl border border-outline/15 bg-white p-5 md:p-6">
+        <article className="mt-5 rounded-lg border border-black/10 bg-white p-4 md:mt-6 md:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h3 className="font-headline text-3xl font-bold leading-tight text-on-surface">{t('analytics.trend')}</h3>
+              <h3 className="font-headline text-2xl font-bold leading-tight tracking-normal text-on-surface md:text-3xl">{t('analytics.trend')}</h3>
               <p className="mt-2 text-sm text-on-surface-variant">{t('dashboard.trendHint')}</p>
             </div>
             <div className="mt-1 flex items-center gap-4 text-xs font-semibold">
@@ -408,8 +394,8 @@ export function DashboardPage() {
             </div>
           </div>
 
-          <div data-testid="dashboard-trend-scroll" className="mt-8 max-w-full overflow-x-auto overscroll-x-contain pb-2">
-            <div data-testid="dashboard-trend-grid" className="grid h-[360px] min-w-max grid-cols-12 items-end gap-3 pr-1 [grid-template-columns:repeat(12,minmax(52px,1fr))] md:[grid-template-columns:repeat(12,minmax(64px,1fr))]">
+          <div data-testid="dashboard-trend-scroll" className="mt-6 max-w-full overflow-x-auto overscroll-x-contain pb-2 md:mt-8">
+            <div data-testid="dashboard-trend-grid" className="grid h-[280px] min-w-max grid-cols-12 items-end gap-2 pr-1 [grid-template-columns:repeat(12,minmax(44px,1fr))] md:h-[360px] md:gap-3 md:[grid-template-columns:repeat(12,minmax(64px,1fr))]">
               {bars.map((bar) => {
               const incomeHeight = bar.total > 0 ? Math.round((bar.income / maxTotal) * 100) : 0
               const expenseHeight = bar.total > 0 ? Math.round((bar.expense / maxTotal) * 100) : 0
@@ -419,7 +405,7 @@ export function DashboardPage() {
                   <button
                     type="button"
                     aria-label={`${bar.label} ${hasActivity ? 'activity' : 'no activity'} ${t('dashboard.income')} ${formatCurrency(bar.income)} ${t('dashboard.expense')} ${formatCurrency(bar.expense)}`}
-                    className={`relative h-full rounded-xl border p-1 text-left transition ${
+                    className={`relative h-full rounded-lg border p-1 text-left transition motion-reduce:transition-none ${
                       activeBar?.key === bar.key
                         ? 'border-primary/50 bg-surface-container'
                         : hasActivity
@@ -456,27 +442,27 @@ export function DashboardPage() {
           </div>
 
           {activeBar ? (
-            <div className="mt-4 min-h-[154px] rounded-xl border border-outline/15 bg-surface-container-low p-4 text-sm text-on-surface">
+            <div className="mt-4 min-h-[154px] rounded-xl bg-[#f2f2f7] p-4 text-sm text-on-surface">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="font-semibold">{activeBar.label}</p>
                   <p className="mt-1">
                     <span className="text-primary">{t('dashboard.income')}: {formatCurrency(activeBar.income)}</span>
-                    <span className="ml-4 text-rose-600">{t('dashboard.expense')}: {formatCurrency(activeBar.expense)}</span>
+                    <span className="ml-4 text-[#b4233c]">{t('dashboard.expense')}: {formatCurrency(activeBar.expense)}</span>
                   </p>
                 </div>
                 <button
                   type="button"
                   aria-label={t('dashboard.openSelectedMonthAria')}
-                  className="min-h-9 rounded-lg border border-primary/20 bg-white px-3 py-2 text-xs font-bold text-primary transition hover:bg-primary-fixed"
+                  className="min-h-11 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-[#0066cc] transition hover:bg-[#eaf3ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0066cc] motion-reduce:transition-none"
                   onClick={handleOpenActiveMonthTransactions}
                 >
                   {t('dashboard.openSelectedMonth')}
                 </button>
               </div>
-              <div className="mt-3 grid gap-2 md:grid-cols-3">
+              <div className="mt-3 divide-y divide-black/10 border-t border-black/10 md:grid md:grid-cols-3 md:divide-x md:divide-y-0">
                 {activeBarTransactions.slice(0, 3).map((tx) => (
-                  <div key={tx.id} className="rounded-lg bg-white px-3 py-2">
+                  <div key={tx.id} className="min-w-0 px-3 py-2 first:pl-0 last:pr-0">
                     <p className="truncate text-xs font-bold text-on-surface">
                       {tx.category_name ?? tx.memo ?? t('transactionsPage.quickFilters.uncategorized')}
                     </p>
@@ -490,7 +476,7 @@ export function DashboardPage() {
                 ))}
               </div>
               {activeBarTransactions.length === 0 ? (
-                <p className="mt-3 rounded-lg bg-white px-3 py-2 text-xs text-on-surface-variant">
+                <p className="mt-3 border-t border-black/10 pt-3 text-xs text-on-surface-variant">
                   {t('dashboard.noSelectedMonthTransactions')}
                 </p>
               ) : null}
@@ -498,7 +484,7 @@ export function DashboardPage() {
           ) : null}
 
           {trend12MonthsQuery.isError || currentOverviewQuery.isError || previousOverviewQuery.isError ? (
-            <div className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            <div className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-[#9f1239]">
               {t('errors.serverError')}
             </div>
           ) : null}

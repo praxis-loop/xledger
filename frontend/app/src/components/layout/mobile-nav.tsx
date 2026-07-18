@@ -7,26 +7,28 @@ export function MobileNav() {
   const { t } = useTranslation()
   const location = useLocation()
 
-  // 只在移动端显示
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
-
-  if (!isMobile) return null
-
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 max-w-full overflow-hidden border-t border-outline/15 bg-surface md:hidden safe-area-inset-bottom">
-      <div className="grid h-16 grid-cols-6 items-center">
-        {mobileNavItems.map(({ to, icon: Icon, labelKey }) => {
+    <nav
+      aria-label={t('layout.mobileNavigation')}
+      data-ui="ios-tab-bar"
+      className="fixed inset-x-0 bottom-0 z-40 hidden max-w-full overflow-hidden border-t border-black/10 bg-white pb-[var(--safe-area-bottom)] pl-[var(--safe-area-left)] pr-[var(--safe-area-right)] backdrop-blur-xl min-[1000px]:hidden max-[999px]:block"
+    >
+      <div className="grid h-[64px] grid-cols-6 items-center">
+        {mobileNavItems.map(({ to, icon: Icon, labelKey, compactLabelKey }) => {
           const isActive = location.pathname === to || location.pathname.startsWith(to + '/')
           return (
             <NavLink
               key={to}
               to={to}
-              className={`flex min-h-[48px] min-w-0 flex-col items-center justify-center gap-0.5 px-1 py-2 transition-colors ${
-                isActive ? 'text-primary' : 'text-on-surface-variant'
+              aria-current={isActive ? 'page' : undefined}
+              className={`flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-0.5 overflow-hidden px-0.5 py-1.5 text-center transition-colors motion-reduce:transition-none ${
+                isActive ? 'text-[#0066cc]' : 'text-[#6e6e73]'
               }`}
             >
-              <Icon size={19} strokeWidth={isActive ? 2.5 : 2} />
-              <span className="max-w-full truncate text-[10px] font-semibold">{t(labelKey)}</span>
+              <Icon aria-hidden="true" size={21} strokeWidth={isActive ? 2.5 : 2} />
+              <span className="max-w-full truncate text-[9px] font-medium leading-[10px]">
+                {t(compactLabelKey ?? labelKey)}
+              </span>
             </NavLink>
           )
         })}

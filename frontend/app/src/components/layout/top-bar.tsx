@@ -139,9 +139,9 @@ export function TopBar() {
 
   return (
     <>
-      <header className="sticky top-0 z-20 border-b border-outline/15 bg-surface-container-lowest/90 px-4 py-3 backdrop-blur md:px-5 xl:px-6">
+      <header className="sticky top-0 z-20 border-b border-black/10 bg-[#f2f2f7]/85 pb-2 pl-[max(1rem,var(--safe-area-left))] pr-[max(1rem,var(--safe-area-right))] pt-[calc(var(--safe-area-top)+8px)] backdrop-blur-xl min-[1000px]:border-outline/15 min-[1000px]:bg-surface-container-lowest/90 min-[1000px]:px-5 min-[1000px]:py-3 xl:px-6">
         <div className="mx-auto flex w-full max-w-[1680px] items-center justify-between gap-4">
-          <form className="relative hidden w-full max-w-[460px] lg:block" onSubmit={handleSearchSubmit}>
+          <form className="relative hidden min-w-0 w-full max-w-[300px] min-[1000px]:block xl:max-w-[460px]" onSubmit={handleSearchSubmit}>
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
             <input
               value={searchInput}
@@ -154,11 +154,11 @@ export function TopBar() {
             </Button>
           </form>
 
-          <div className="ml-auto flex items-center gap-2 md:gap-2.5">
+          <div className="ml-auto flex items-center gap-2 xl:gap-2.5">
             <select
               value={currentLang}
               onChange={handleLanguageChange}
-              className="h-10 w-[72px] cursor-pointer rounded-lg border border-outline/20 bg-surface-container-low px-2 text-sm text-on-surface-variant transition hover:bg-surface-container md:w-auto"
+              className="h-11 w-[88px] cursor-pointer rounded-lg border border-black/10 bg-white/80 px-2 text-sm font-medium text-[#3a3a3c] transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0066cc] motion-reduce:transition-none xl:h-10 xl:w-auto xl:border-outline/20 xl:bg-surface-container-low xl:font-normal xl:text-on-surface-variant"
               aria-label={t('layout.topBar.languageLabel')}
             >
               {supportedLanguageOptions.map((language) => (
@@ -169,7 +169,7 @@ export function TopBar() {
             </select>
             <button
               type="button"
-              className="hidden h-10 w-10 place-items-center rounded-lg border border-outline/20 bg-surface-container-low text-on-surface-variant transition hover:bg-surface-container md:grid"
+              className="hidden h-10 w-10 place-items-center rounded-lg border border-outline/20 bg-surface-container-low text-on-surface-variant transition hover:bg-surface-container min-[1000px]:grid"
               aria-label={t('layout.topBar.notifications')}
               onClick={() => setNotificationsOpen(true)}
             >
@@ -177,7 +177,7 @@ export function TopBar() {
             </button>
             <button
               type="button"
-              className="hidden h-10 w-10 place-items-center rounded-lg border border-outline/20 bg-surface-container-low text-on-surface-variant transition hover:bg-surface-container md:grid"
+              className="hidden h-10 w-10 place-items-center rounded-lg border border-outline/20 bg-surface-container-low text-on-surface-variant transition hover:bg-surface-container min-[1000px]:grid"
               aria-label={t('layout.topBar.help')}
               onClick={() => setHelpOpen(true)}
             >
@@ -186,7 +186,7 @@ export function TopBar() {
             {canInstall ? (
               <Button
                 variant="secondary"
-                className="hidden h-10 px-3 md:inline-flex"
+                className="hidden h-10 px-3 xl:inline-flex"
                 onClick={() => {
                   void install()
                 }}
@@ -197,21 +197,27 @@ export function TopBar() {
             ) : null}
             <Button
               variant="secondary"
-              className="hidden h-10 px-3 md:inline-flex"
+              className="hidden h-10 px-3 xl:inline-flex"
               onClick={() => setMobileDeviceOpen(true)}
             >
               <Smartphone className="mr-1 h-4 w-4" />
               {t('layout.mobileDevice.title')}
             </Button>
             {updateAvailable ? (
-              <Button variant="secondary" className="hidden h-10 px-3 md:inline-flex" onClick={() => void updateNow()} disabled={updating}>
-                <RefreshCcw className="mr-1 h-4 w-4" />
-                {updating ? t('layout.topBar.updating') : t('layout.topBar.updateApp')}
+              <Button
+                variant="secondary"
+                className="hidden h-10 w-10 px-0 min-[1000px]:inline-flex xl:w-auto xl:px-3"
+                onClick={() => void updateNow()}
+                disabled={updating}
+                aria-label={updating ? t('layout.topBar.updating') : t('layout.topBar.updateApp')}
+              >
+                <RefreshCcw className="h-4 w-4 xl:mr-1" />
+                <span className="hidden xl:inline">{updating ? t('layout.topBar.updating') : t('layout.topBar.updateApp')}</span>
               </Button>
             ) : null}
             <button
               type="button"
-              className="grid h-10 w-10 place-items-center rounded-lg border border-outline/20 bg-surface-container-low text-on-surface-variant transition hover:bg-surface-container md:hidden"
+              className="grid h-11 w-11 place-items-center rounded-full bg-white/80 text-[#0066cc] transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0066cc] motion-reduce:transition-none xl:hidden"
               aria-label={t('layout.topBar.installGuide')}
               onClick={() => navigate('/install')}
             >
@@ -219,7 +225,7 @@ export function TopBar() {
             </button>
             <button
               type="button"
-              className="grid h-10 w-10 place-items-center rounded-lg border border-outline/20 bg-surface-container-low text-on-surface-variant transition hover:bg-surface-container md:hidden"
+              className="grid h-11 w-11 place-items-center rounded-full bg-white/80 text-[#0066cc] transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0066cc] motion-reduce:transition-none xl:hidden"
               aria-label={t('layout.topBar.openProfile')}
               onClick={openProfileDialog}
             >
@@ -227,7 +233,7 @@ export function TopBar() {
             </button>
             <button
               type="button"
-              className="hidden items-center gap-3 rounded-lg border border-outline/10 bg-surface-container-low px-3 py-2 md:flex"
+              className="hidden items-center gap-3 rounded-lg border border-outline/10 bg-surface-container-low px-3 py-2 xl:flex"
               onClick={openProfileDialog}
             >
               <div className="text-right leading-tight">
@@ -237,9 +243,9 @@ export function TopBar() {
                 {(displayName[0] ?? 'U').toUpperCase()}
               </div>
             </button>
-            <Button variant="ghost" className="px-2 py-2 md:px-3" onClick={() => void logout()} aria-label={t('layout.topBar.logout')}>
-              <LogOut className="h-4 w-4 md:hidden" />
-              <span className="hidden md:inline">{t('layout.topBar.logout')}</span>
+            <Button variant="ghost" className="h-11 w-11 rounded-full px-0 py-0 text-[#0066cc] xl:h-auto xl:w-auto xl:rounded-lg xl:px-3 xl:py-2" onClick={() => void logout()} aria-label={t('layout.topBar.logout')}>
+              <LogOut className="h-4 w-4 xl:hidden" />
+              <span className="hidden xl:inline">{t('layout.topBar.logout')}</span>
             </Button>
           </div>
         </div>

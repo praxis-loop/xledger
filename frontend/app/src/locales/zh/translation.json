@@ -222,6 +222,15 @@
   "layout": {
     "brandTagline": "财务精准管理",
     "primaryNavigation": "主导航",
+    "mobileNavigation": "移动端导航",
+    "mobileTabs": {
+      "home": "首页",
+      "entries": "交易",
+      "reports": "统计",
+      "accounts": "账户",
+      "import": "导入",
+      "settings": "设置"
+    },
     "routeFallback": "加载中...",
     "authGuard": {
       "syncing": "正在同步账本..."

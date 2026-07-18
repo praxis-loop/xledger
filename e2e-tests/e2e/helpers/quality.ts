@@ -26,6 +26,26 @@ export async function installVisualStabilizers(page: Page) {
           super(args[0])
           return
         }
+        if (args.length === 2) {
+          super(args[0], args[1])
+          return
+        }
+        if (args.length === 3) {
+          super(args[0], args[1], args[2])
+          return
+        }
+        if (args.length === 4) {
+          super(args[0], args[1], args[2], args[3])
+          return
+        }
+        if (args.length === 5) {
+          super(args[0], args[1], args[2], args[3], args[4])
+          return
+        }
+        if (args.length === 6) {
+          super(args[0], args[1], args[2], args[3], args[4], args[5])
+          return
+        }
         super(args[0], args[1], args[2], args[3], args[4], args[5], args[6])
       }
 
@@ -40,16 +60,18 @@ export async function installVisualStabilizers(page: Page) {
       value: MockDate,
     })
 
-    const style = document.createElement('style')
-    style.setAttribute('data-e2e-visual-stable', 'true')
-    style.textContent = `
-      *, *::before, *::after {
-        animation: none !important;
-        transition: none !important;
-        caret-color: transparent !important;
-      }
-      html { scroll-behavior: auto !important; }
-    `
-    document.head.appendChild(style)
+    window.addEventListener('DOMContentLoaded', () => {
+      const style = document.createElement('style')
+      style.setAttribute('data-e2e-visual-stable', 'true')
+      style.textContent = `
+        *, *::before, *::after {
+          animation: none !important;
+          transition: none !important;
+          caret-color: transparent !important;
+        }
+        html { scroll-behavior: auto !important; }
+      `
+      document.head.appendChild(style)
+    }, { once: true })
   }, { fixedTimeISO: FIXED_TIME_ISO })
 }

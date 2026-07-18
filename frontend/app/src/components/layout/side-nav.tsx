@@ -22,7 +22,7 @@ export function SideNav() {
 
   return (
     <>
-      <aside className="hidden w-[230px] shrink-0 border-r border-outline/15 bg-surface-container-lowest/95 px-4 py-5 md:sticky md:top-0 md:flex md:h-screen md:flex-col">
+      <aside className="hidden w-[230px] shrink-0 border-r border-outline/15 bg-surface-container-lowest/95 px-4 py-5 min-[1000px]:sticky min-[1000px]:top-0 min-[1000px]:flex min-[1000px]:h-screen min-[1000px]:flex-col">
         <div className="mb-6 px-2 py-2">
           <div className="flex items-center gap-3">
             <BrandMark />

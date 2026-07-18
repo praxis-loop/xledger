@@ -227,6 +227,13 @@ describe('dashboard and analytics pages', () => {
       expect(screen.getByText('¥42,850.00')).toBeInTheDocument()
       expect(screen.getByText('¥18,240.50')).toBeInTheDocument()
       expect(screen.getByText('¥24,609.50')).toBeInTheDocument()
+      expect(screen.getByRole('radiogroup', { name: /select period/i })).toHaveAttribute(
+        'data-ui',
+        'ios-segmented-control',
+      )
+      expect(screen.getByRole('article', { name: /month income/i })).toHaveAttribute('data-tone', 'positive')
+      expect(screen.getByRole('article', { name: /month expense/i })).toHaveAttribute('data-tone', 'negative')
+      expect(screen.getByRole('article', { name: /current balance/i })).toHaveAttribute('data-tone', 'balance')
       expect(screen.getByText(/tap or hover bars/i)).toBeInTheDocument()
       expect(screen.getByText(/income:/i)).toBeInTheDocument()
       expect(screen.getByText(/expense:/i)).toBeInTheDocument()

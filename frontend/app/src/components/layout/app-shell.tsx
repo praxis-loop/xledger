@@ -7,12 +7,12 @@ import { FirstLoginOnboarding } from './first-login-onboarding'
 
 export function AppShell({ children }: PropsWithChildren) {
   return (
-    <div className="min-h-screen bg-transparent text-on-surface md:flex">
+    <div className="min-h-screen bg-[#f2f2f7] text-on-surface min-[1000px]:flex">
       <OfflineBanner />
       <SideNav />
-      <div className="min-w-0 flex min-h-screen flex-1 flex-col pb-16 md:pb-0">
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <TopBar />
-        <main className="pb-mobile-nav mx-auto w-full max-w-[1680px] flex-1 p-4 md:p-5 xl:p-6">
+        <main className="pb-mobile-nav mx-auto w-full max-w-[1680px] flex-1 pl-[max(1rem,var(--safe-area-left))] pr-[max(1rem,var(--safe-area-right))] pt-4 min-[1000px]:p-5 xl:p-6">
           <FirstLoginOnboarding />
           {children}
         </main>
