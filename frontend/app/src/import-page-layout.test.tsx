@@ -194,4 +194,35 @@ describe('standalone import layout', () => {
       JSON.stringify({ date: 'amount', amount: 'amount' }),
     )
   })
+
+  it('clears a failed confirmation when the user cancels and starts a new import', async () => {
+    const preview = {
+      format: 'csv' as const,
+      columns: ['date', 'amount'],
+      sample_rows: [['2026-01-01', '10']],
+      mappingSlots: ['date', 'amount'],
+      mappingCandidates: { date: ['date'], amount: ['amount'] },
+      suggested_mapping: { date: 'date', amount: 'amount' },
+    }
+    vi.mocked(importCSVPreview).mockResolvedValue(preview)
+    vi.mocked(importCSVConfirm).mockRejectedValueOnce(new Error('Confirmation failed'))
+    const user = userEvent.setup()
+    renderImportPage()
+
+    await user.upload(
+      screen.getByLabelText(/csv file/i),
+      new File(['date,amount\n2026-01-01,10'], 'first.csv', { type: 'text/csv' }),
+    )
+    await user.click(await screen.findByRole('button', { name: /confirm import/i }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Confirmation failed')
+
+    await user.click(screen.getByRole('button', { name: /cancel/i }))
+    await user.upload(
+      screen.getByLabelText(/csv file/i),
+      new File(['date,amount\n2026-01-02,20'], 'second.csv', { type: 'text/csv' }),
+    )
+
+    expect(await screen.findByText('second.csv')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
 })

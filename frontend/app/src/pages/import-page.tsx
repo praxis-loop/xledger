@@ -69,6 +69,15 @@ export function ImportPage() {
   const handleBack = () => {
     navigate(locationState?.from === '/transactions' ? '/transactions' : '/me')
   }
+  const resetImportFlow = () => {
+    setStep('upload')
+    setFile(null)
+    setPreview(null)
+    setMapping({})
+    previewMutation.reset()
+    confirmMutation.reset()
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
   const activeStepIndex = importSteps.indexOf(step)
 
   return (
@@ -263,7 +272,7 @@ export function ImportPage() {
             </button>
             <button
               type="button"
-              onClick={() => { setStep('upload'); setFile(null); setPreview(null) }}
+              onClick={resetImportFlow}
               className="min-h-11 flex-1 rounded-xl border border-outline/15 py-3"
             >
               {t('common.cancel')}
@@ -290,7 +299,7 @@ export function ImportPage() {
           </p>
           <button
             type="button"
-            onClick={() => { setStep('upload'); setFile(null); setPreview(null) }}
+            onClick={resetImportFlow}
             className="min-h-11 rounded-xl bg-primary px-8 py-3 font-semibold text-white"
           >
             {t('import.importMore')}

@@ -74,7 +74,6 @@ export async function installVisualStabilizers(page: Page) {
         html { scroll-behavior: auto !important; }
         html { scrollbar-width: none !important; }
         *::-webkit-scrollbar { width: 0 !important; height: 0 !important; }
-        [data-ui="transaction-quick-filters"] { overflow-x: hidden !important; }
       `
       document.head.appendChild(style)
     }, { once: true })

@@ -21,6 +21,19 @@ async function expectNoPageHorizontalOverflow(page: Page) {
   expect(widths.scrollWidth).toBeLessThanOrEqual(widths.clientWidth)
 }
 
+async function expectMobileQuickFiltersScrollable(page: Page) {
+  const quickFilters = page.locator('[data-ui="transaction-quick-filters"]')
+  await expect(quickFilters).toBeVisible()
+  const scrollState = await quickFilters.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    overflowX: getComputedStyle(element).overflowX,
+    scrollWidth: element.scrollWidth,
+  }))
+
+  expect(scrollState.overflowX).toBe('auto')
+  expect(scrollState.scrollWidth).toBeGreaterThan(scrollState.clientWidth)
+}
+
 async function captureDashboard(page: Page, snapshotName: string, navigate = true) {
   if (navigate) {
     await page.goto('/dashboard', { waitUntil: 'networkidle' })
@@ -43,6 +56,9 @@ async function captureVisualBaselines(
     await page.goto(route.path, { waitUntil: 'networkidle' })
     await expect(page.getByRole('heading', { name: route.heading })).toBeVisible()
     await expectNoPageHorizontalOverflow(page)
+    if (route.path === '/transactions' && (page.viewportSize()?.width ?? 1000) < 1000) {
+      await expectMobileQuickFiltersScrollable(page)
+    }
     await expect(page).toHaveScreenshot(`visual-${viewportTag}-${route.snapshotKey}.png`, {
       animations: 'disabled',
       fullPage: false,
