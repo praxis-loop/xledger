@@ -324,6 +324,11 @@
     "title": "Transactions",
     "listView": "List View",
     "calendarView": "Calendar View",
+    "viewLabel": "Transaction view",
+    "mobileActions": {
+      "menuLabel": "Transaction actions",
+      "more": "More transaction actions"
+    },
     "export": "Export",
     "exporting": "Exporting...",
     "exportSummary": "Export {{count}} transactions",
