@@ -13,7 +13,7 @@ export function MobileNav() {
       data-ui="ios-tab-bar"
       className="fixed inset-x-0 bottom-0 z-40 hidden max-w-full overflow-hidden border-t border-black/10 bg-white pb-[var(--safe-area-bottom)] pl-[var(--safe-area-left)] pr-[var(--safe-area-right)] backdrop-blur-xl min-[1000px]:hidden max-[999px]:block"
     >
-      <div className="grid h-[64px] grid-cols-6 items-center">
+      <div className="grid h-[64px] grid-cols-5 items-center">
         {mobileNavItems.map(({ to, icon: Icon, labelKey, compactLabelKey }) => {
           const isActive = location.pathname === to || location.pathname.startsWith(to + '/')
           return (

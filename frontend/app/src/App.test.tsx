@@ -93,6 +93,13 @@ describe('App shell', () => {
       expect(screen.getByRole('navigation', { name: /primary/i })).toBeInTheDocument()
       expect(screen.getByText(/demo@example.com/i)).toBeInTheDocument()
     })
+
+    const topBar = screen.getByRole('banner')
+    const main = screen.getByRole('main')
+
+    expect(topBar).toHaveAttribute('data-ui', 'desktop-top-bar')
+    expect(topBar).toHaveClass('max-[999px]:hidden')
+    expect(main).toHaveClass('pb-mobile-nav')
   })
 
   it('keeps profile and mobile device actions working from the desktop app shell', async () => {

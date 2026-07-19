@@ -228,8 +228,7 @@
       "entries": "交易",
       "reports": "统计",
       "accounts": "账户",
-      "import": "导入",
-      "settings": "设置"
+      "me": "我的"
     },
     "routeFallback": "加载中...",
     "authGuard": {
@@ -241,6 +240,20 @@
     "accountCenter": {
       "languageChangeFailed": "切换语言失败。",
       "logoutFailed": "退出登录失败。"
+    },
+    "me": {
+      "title": "我的",
+      "profile": "个人资料",
+      "language": "语言",
+      "importData": "导入数据",
+      "mobileDevice": "移动设备",
+      "notifications": "通知",
+      "help": "帮助",
+      "settings": "设置",
+      "logout": "退出登录",
+      "accountActions": "账户操作",
+      "supportActions": "支持",
+      "destructiveActions": "危险操作"
     },
     "topBar": {
       "searchPlaceholder": "搜索交易...",

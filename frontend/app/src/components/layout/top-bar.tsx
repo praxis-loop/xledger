@@ -45,7 +45,10 @@ export function TopBar() {
   }
 
   return (
-    <header className="sticky top-0 z-20 border-b border-black/10 bg-[#f2f2f7]/85 pb-2 pl-[max(1rem,var(--safe-area-left))] pr-[max(1rem,var(--safe-area-right))] pt-[calc(var(--safe-area-top)+8px)] backdrop-blur-xl min-[1000px]:border-outline/15 min-[1000px]:bg-surface-container-lowest/90 min-[1000px]:px-5 min-[1000px]:py-3 xl:px-6">
+    <header
+      data-ui="desktop-top-bar"
+      className="sticky top-0 z-20 border-b border-black/10 bg-[#f2f2f7]/85 pb-2 pl-[max(1rem,var(--safe-area-left))] pr-[max(1rem,var(--safe-area-right))] pt-[calc(var(--safe-area-top)+8px)] backdrop-blur-xl max-[999px]:hidden min-[1000px]:border-outline/15 min-[1000px]:bg-surface-container-lowest/90 min-[1000px]:px-5 min-[1000px]:py-3 xl:px-6"
+    >
       <div className="mx-auto flex w-full max-w-[1680px] items-center justify-between gap-4">
         <form className="relative hidden min-w-0 w-full max-w-[300px] min-[1000px]:block xl:max-w-[460px]" onSubmit={handleSearchSubmit}>
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
@@ -95,22 +98,24 @@ export function TopBar() {
           {canInstall ? (
             <Button
               variant="secondary"
-              className="hidden h-10 px-3 xl:inline-flex"
+              aria-label={t('layout.topBar.installApp')}
+              className="hidden h-10 w-10 px-0 min-[1000px]:inline-flex xl:w-auto xl:px-3"
               onClick={() => {
                 void install()
               }}
             >
-              <Download className="mr-1 h-4 w-4" />
-              {t('layout.topBar.installApp')}
+              <Download className="h-4 w-4 xl:mr-1" />
+              <span className="hidden xl:inline">{t('layout.topBar.installApp')}</span>
             </Button>
           ) : null}
           <Button
             variant="secondary"
-            className="hidden h-10 px-3 xl:inline-flex"
+            aria-label={t('layout.mobileDevice.title')}
+            className="hidden h-10 w-10 px-0 min-[1000px]:inline-flex xl:w-auto xl:px-3"
             onClick={openMobileDevice}
           >
-            <Smartphone className="mr-1 h-4 w-4" />
-            {t('layout.mobileDevice.title')}
+            <Smartphone className="h-4 w-4 xl:mr-1" />
+            <span className="hidden xl:inline">{t('layout.mobileDevice.title')}</span>
           </Button>
           {updateAvailable ? (
             <Button
@@ -124,14 +129,6 @@ export function TopBar() {
               <span className="hidden xl:inline">{updating ? t('layout.topBar.updating') : t('layout.topBar.updateApp')}</span>
             </Button>
           ) : null}
-          <button
-            type="button"
-            className="grid h-11 w-11 place-items-center rounded-full bg-white/80 text-[#0066cc] transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0066cc] motion-reduce:transition-none xl:hidden"
-            aria-label={t('layout.topBar.installGuide')}
-            onClick={() => navigate('/install')}
-          >
-            <Smartphone className="h-4 w-4" />
-          </button>
           <button
             type="button"
             className="grid h-11 w-11 place-items-center rounded-full bg-white/80 text-[#0066cc] transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0066cc] motion-reduce:transition-none xl:hidden"

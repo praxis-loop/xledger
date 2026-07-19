@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  CircleUserRound,
   Home,
   LayoutDashboard,
   PieChart,
@@ -7,7 +8,6 @@ import {
   ReceiptText,
   Settings,
   Target,
-  Upload,
   Wallet,
   Zap,
   type LucideIcon,
@@ -35,6 +35,5 @@ export const mobileNavItems: NavItem[] = [
   { to: '/transactions', labelKey: 'nav.transactions', compactLabelKey: 'layout.mobileTabs.entries', icon: Receipt },
   { to: '/analytics', labelKey: 'nav.analytics', compactLabelKey: 'layout.mobileTabs.reports', icon: PieChart },
   { to: '/accounts', labelKey: 'nav.accounts', compactLabelKey: 'layout.mobileTabs.accounts', icon: Wallet },
-  { to: '/import', labelKey: 'nav.import', compactLabelKey: 'layout.mobileTabs.import', icon: Upload },
-  { to: '/settings', labelKey: 'nav.settings', compactLabelKey: 'layout.mobileTabs.settings', icon: Settings },
+  { to: '/me', labelKey: 'layout.me.title', compactLabelKey: 'layout.mobileTabs.me', icon: CircleUserRound },
 ]
