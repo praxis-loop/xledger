@@ -24,8 +24,12 @@ async function captureDashboard(page: Page, snapshotName: string, navigate = tru
   })
 }
 
-async function captureVisualBaselines(page: Page, viewportTag: string) {
-  for (const route of appRoutes) {
+async function captureVisualBaselines(
+  page: Page,
+  viewportTag: string,
+  routes = appRoutes,
+) {
+  for (const route of routes) {
     await page.goto(route.path, { waitUntil: 'networkidle' })
     await expect(page.getByRole('heading', { name: route.heading })).toBeVisible()
     await expect(page).toHaveScreenshot(`visual-${viewportTag}-${route.snapshotKey}.png`, {
@@ -70,9 +74,38 @@ test.describe('visual regression @visual', () => {
   test.describe('compact mobile', () => {
     test.use({ viewport: { width: 320, height: 740 } })
 
-    test('dashboard fits a 320px viewport', async ({ page }, testInfo) => {
+    test('core mobile destinations fit a 320px viewport', async ({ page }, testInfo) => {
       await prepareVisualSession(page, testInfo)
       await captureDashboard(page, 'visual-mobile-320-dashboard.png')
+      await captureVisualBaselines(
+        page,
+        'mobile-320',
+        appRoutes.filter((route) => ['/me', '/transactions', '/import'].includes(route.path)),
+      )
+    })
+  })
+
+  test.describe('mobile shell boundary', () => {
+    test.use({ viewport: { width: 999, height: 900 } })
+
+    test('keeps the mobile shell through 999px', async ({ page }, testInfo) => {
+      await prepareVisualSession(page, testInfo)
+      await page.goto('/dashboard', { waitUntil: 'networkidle' })
+      await expect(page.locator('[data-ui="desktop-top-bar"]')).toBeHidden()
+      await expect(page.getByRole('navigation', { name: 'Mobile navigation' })).toBeVisible()
+      await captureDashboard(page, 'visual-mobile-999-dashboard.png', false)
+    })
+  })
+
+  test.describe('desktop shell threshold', () => {
+    test.use({ viewport: { width: 1000, height: 900 } })
+
+    test('enters the desktop shell at 1000px', async ({ page }, testInfo) => {
+      await prepareVisualSession(page, testInfo)
+      await page.goto('/dashboard', { waitUntil: 'networkidle' })
+      await expect(page.locator('[data-ui="desktop-top-bar"]')).toBeVisible()
+      await expect(page.getByRole('navigation', { name: 'Mobile navigation' })).toBeHidden()
+      await captureDashboard(page, 'visual-desktop-1000-dashboard.png', false)
     })
   })
 
@@ -117,6 +150,11 @@ test.describe('visual regression @visual', () => {
       })
       await prepareVisualSession(page, testInfo)
       await captureDashboard(page, 'visual-mobile-landscape-dashboard.png')
+      await captureVisualBaselines(
+        page,
+        'mobile-landscape',
+        appRoutes.filter((route) => ['/me', '/transactions', '/import'].includes(route.path)),
+      )
     })
   })
 
@@ -139,7 +177,10 @@ test.describe('visual regression @visual', () => {
 
     test('dashboard fits translated Chinese labels', async ({ page }, testInfo) => {
       await prepareVisualSession(page, testInfo)
-      await page.getByLabel('Select language').selectOption('zh')
+      await page.goto('/me', { waitUntil: 'networkidle' })
+      await page.getByRole('radio', { name: '中文' }).check()
+      await expect(page.getByRole('heading', { name: '我的' })).toBeVisible()
+      await page.getByRole('link', { name: '首页' }).click()
       await expect(page.getByRole('heading', { name: '财务概览' })).toBeVisible()
       await captureDashboard(page, 'visual-mobile-zh-dashboard.png', false)
     })

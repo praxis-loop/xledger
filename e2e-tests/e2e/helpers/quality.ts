@@ -8,6 +8,8 @@ export const appRoutes: Array<{ path: string; heading: string; snapshotKey: stri
   { path: '/analytics', heading: 'Analytics', snapshotKey: 'analytics' },
   { path: '/accounts', heading: 'Accounts', snapshotKey: 'accounts' },
   { path: '/settings', heading: 'Settings', snapshotKey: 'settings' },
+  { path: '/me', heading: 'Me', snapshotKey: 'me' },
+  { path: '/import', heading: 'Import Data', snapshotKey: 'import' },
 ]
 
 export async function installVisualStabilizers(page: Page) {
@@ -70,6 +72,8 @@ export async function installVisualStabilizers(page: Page) {
           caret-color: transparent !important;
         }
         html { scroll-behavior: auto !important; }
+        html { scrollbar-width: none !important; }
+        *::-webkit-scrollbar { width: 0 !important; height: 0 !important; }
       `
       document.head.appendChild(style)
     }, { once: true })
