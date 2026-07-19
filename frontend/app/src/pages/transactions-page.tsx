@@ -470,6 +470,7 @@ export function TransactionsPage() {
   const [mobileFiltersExpanded, setMobileFiltersExpanded] = useState(false)
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false)
   const mobileActionsButtonRef = useRef<HTMLButtonElement>(null)
+  const mobileActionsMenuRef = useRef<HTMLDivElement>(null)
   const [deletedTransactionIds, setDeletedTransactionIds] = useState<Set<string>>(() => new Set())
   const [dismissedReviewIds, setDismissedReviewIds] = useState<Set<string>>(() => new Set())
   const [pendingUndo, setPendingUndo] = useState<TransactionRecord | null>(null)
@@ -496,14 +497,10 @@ export function TransactionsPage() {
   useEffect(() => {
     if (!mobileActionsOpen) return undefined
 
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key !== 'Escape') return
-      setMobileActionsOpen(false)
-      mobileActionsButtonRef.current?.focus()
-    }
-
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
+    mobileActionsMenuRef.current
+      ?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')
+      ?.focus()
+    return undefined
   }, [mobileActionsOpen])
 
   useEffect(() => {
@@ -981,6 +978,9 @@ export function TransactionsPage() {
   async function handleMobileExportTransactions() {
     try {
       await handleExportTransactions()
+    } catch {
+      // The mutation retains the error for the page-level export status.
+      return
     } finally {
       setMobileActionsOpen(false)
       mobileActionsButtonRef.current?.focus()
@@ -990,6 +990,43 @@ export function TransactionsPage() {
   function handleMobileImport() {
     setMobileActionsOpen(false)
     navigate('/import', { state: { from: '/transactions' } })
+  }
+
+  function handleMobileActionsKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key === 'Tab') {
+      window.setTimeout(() => setMobileActionsOpen(false), 0)
+      return
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      setMobileActionsOpen(false)
+      mobileActionsButtonRef.current?.focus()
+      return
+    }
+
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
+    const menuItems = Array.from(
+      mobileActionsMenuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? [],
+    ).filter((item) => !item.disabled)
+    if (menuItems.length === 0) return
+
+    event.preventDefault()
+    const currentIndex = menuItems.indexOf(document.activeElement as HTMLButtonElement)
+    if (event.key === 'Home') {
+      menuItems[0].focus()
+      return
+    }
+    if (event.key === 'End') {
+      menuItems[menuItems.length - 1].focus()
+      return
+    }
+
+    const direction = event.key === 'ArrowDown' ? 1 : -1
+    const nextIndex = currentIndex === -1
+      ? direction === 1 ? 0 : menuItems.length - 1
+      : (currentIndex + direction + menuItems.length) % menuItems.length
+    menuItems[nextIndex].focus()
   }
 
   async function handleDeleteTransaction(tx: TransactionRecord) {
@@ -1176,7 +1213,7 @@ export function TransactionsPage() {
                 <Download className="h-4 w-4" />
                 {exportTransactionsMutation.isPending ? t('transactionsPage.exporting') : t('transactionsPage.export')}
               </Button>
-              <span className="text-xs font-bold text-on-surface-variant">
+              <span className="rounded-full bg-surface-container px-3 py-1.5 text-xs font-bold text-on-surface-variant">
                 {t('transactionsPage.exportSummary', { count: exportTotal })}
               </span>
               <Button variant="secondary" onClick={() => setShowImportDialog(true)}>
@@ -1199,10 +1236,12 @@ export function TransactionsPage() {
               </button>
               {mobileActionsOpen ? (
                 <div
+                  ref={mobileActionsMenuRef}
                   id="mobile-transaction-actions"
                   role="menu"
                   aria-label={t('transactionsPage.mobileActions.menuLabel')}
                   className="absolute right-0 top-12 z-30 min-w-40 overflow-hidden rounded-xl border border-outline/15 bg-white p-1 shadow-ambient"
+                  onKeyDown={handleMobileActionsKeyDown}
                 >
                   <button
                     role="menuitem"
