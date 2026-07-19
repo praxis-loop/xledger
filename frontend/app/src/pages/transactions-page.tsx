@@ -1246,6 +1246,7 @@ export function TransactionsPage() {
                   <button
                     role="menuitem"
                     type="button"
+                    tabIndex={-1}
                     className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-on-surface hover:bg-surface-container-low"
                     onClick={handleMobileImport}
                   >
@@ -1254,6 +1255,7 @@ export function TransactionsPage() {
                   <button
                     role="menuitem"
                     type="button"
+                    tabIndex={-1}
                     disabled={exportTransactionsMutation.isPending}
                     className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-on-surface hover:bg-surface-container-low disabled:opacity-60"
                     onClick={() => void handleMobileExportTransactions()}

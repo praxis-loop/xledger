@@ -510,6 +510,24 @@ describe('transactions domain', () => {
       expect(within(page).queryByRole('menu', { name: /transaction actions/i })).not.toBeInTheDocument()
       expect(moreButton).toHaveFocus()
     })
+
+    await user.click(moreButton)
+    await waitFor(() => expect(within(page).getByRole('menuitem', { name: /^import$/i })).toHaveFocus())
+    await user.tab()
+    await waitFor(() => {
+      expect(within(page).queryByRole('menu', { name: /transaction actions/i })).not.toBeInTheDocument()
+      expect(addButton).toHaveFocus()
+    })
+
+    await user.click(moreButton)
+    await waitFor(() => expect(within(page).getByRole('menuitem', { name: /^import$/i })).toHaveFocus())
+    await user.keyboard('{ArrowDown}')
+    expect(within(page).getByRole('menuitem', { name: /^export$/i })).toHaveFocus()
+    await user.tab({ shift: true })
+    await waitFor(() => {
+      expect(within(page).queryByRole('menu', { name: /transaction actions/i })).not.toBeInTheDocument()
+      expect(moreButton).toHaveFocus()
+    })
   })
 
   it('closes the mobile transaction menu after export and restores trigger focus', async () => {
