@@ -238,6 +238,10 @@
     "offline": {
       "message": "当前处于离线状态，正在显示缓存数据。"
     },
+    "accountCenter": {
+      "languageChangeFailed": "切换语言失败。",
+      "logoutFailed": "退出登录失败。"
+    },
     "topBar": {
       "searchPlaceholder": "搜索交易...",
       "languageLabel": "选择语言",

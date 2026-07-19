@@ -95,7 +95,7 @@ describe('App shell', () => {
     })
   })
 
-  it('opens a QR code entry for mobile devices from the app shell', async () => {
+  it('keeps profile and mobile device actions working from the desktop app shell', async () => {
     const user = userEvent.setup()
     global.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
@@ -149,6 +149,12 @@ describe('App shell', () => {
     expect(screen.getByRole('heading', { name: /use on mobile device/i })).toBeInTheDocument()
     expect(screen.getByLabelText(/mobile entry qr code/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /switch to mobile version/i })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /close dialog/i }))
+    await user.click(screen.getByRole('button', { name: /open profile/i }))
+
+    expect(screen.getAllByRole('heading', { name: /profile/i })).toHaveLength(1)
+    expect(screen.getByLabelText(/^email$/i)).toBeDisabled()
   })
 
   it('renders the mobile install guide as a protected app page', async () => {

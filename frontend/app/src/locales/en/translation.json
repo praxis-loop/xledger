@@ -238,6 +238,10 @@
     "offline": {
       "message": "You are offline. Cached data is being shown."
     },
+    "accountCenter": {
+      "languageChangeFailed": "Failed to change language.",
+      "logoutFailed": "Failed to log out."
+    },
     "topBar": {
       "searchPlaceholder": "Search transactions...",
       "languageLabel": "Select language",
