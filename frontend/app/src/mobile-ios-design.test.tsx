@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -7,6 +9,19 @@ import { MobileNav } from '@/components/layout/mobile-nav'
 import '@/i18n'
 
 describe('mobile iOS design primitives', () => {
+  it('keeps the transaction mobile layout active through 999px', () => {
+    const source = readFileSync(resolve(__dirname, 'pages/transactions-page.tsx'), 'utf8')
+
+    expect(source).toContain("matchMedia('(max-width: 999px)')")
+    expect(source).not.toContain("matchMedia('(max-width: 767px)')")
+    expect(source).toMatch(
+      /data-testid="desktop-transaction-table"[\s\S]{0,180}className="hidden[^"]*min-\[1000px\]:block"/,
+    )
+    expect(source).toMatch(
+      /data-testid="mobile-transaction-cards"[\s\S]{0,120}className="space-y-3 min-\[1000px\]:hidden"/,
+    )
+  })
+
   it('exposes segmented options as a controlled radio group', async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()

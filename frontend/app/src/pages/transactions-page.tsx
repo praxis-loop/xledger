@@ -508,7 +508,7 @@ export function TransactionsPage() {
 
   useEffect(() => {
     if (!globalThis.matchMedia) return undefined
-    const query = globalThis.matchMedia('(max-width: 767px)')
+    const query = globalThis.matchMedia('(max-width: 999px)')
     const updateLayout = () => setIsMobileListLayout(query.matches)
     updateLayout()
     query.addEventListener('change', updateLayout)
@@ -1164,7 +1164,7 @@ export function TransactionsPage() {
               { value: 'calendar', label: t('transactionsPage.calendarView') },
             ]}
             onChange={setView}
-            className="order-3 min-[1000px]:order-none"
+            className="order-3 md:w-full min-[1000px]:order-none min-[1000px]:w-auto"
           />
           <div className="flex items-center gap-2 min-[1000px]:gap-3">
             <div data-testid="desktop-transaction-actions" className="hidden items-center gap-3 min-[1000px]:flex">
@@ -1489,7 +1489,10 @@ export function TransactionsPage() {
             ) : null}
 
             {filteredListTransactions.length > 0 ? (
-              <article className="hidden overflow-x-auto rounded-2xl border border-outline/15 bg-white md:block">
+              <article
+                data-testid="desktop-transaction-table"
+                className="hidden overflow-x-auto rounded-2xl border border-outline/15 bg-white min-[1000px]:block"
+              >
                 <div className="grid min-w-[980px] grid-cols-[44px_1.6fr_1fr_1fr_1fr_0.75fr_1fr_0.55fr] bg-surface-container-low px-5 py-3 text-[10px] font-bold uppercase tracking-[0.08em] text-on-surface-variant">
                   <p>{t('transactionsPage.table.select')}</p>
                   <p>{t('transactionsPage.table.transactionCategory')}</p>
@@ -1619,7 +1622,7 @@ export function TransactionsPage() {
               </article>
             )}
             {isMobileListLayout && filteredListTransactions.length > 0 ? (
-              <div className="space-y-3 md:hidden">
+              <div data-testid="mobile-transaction-cards" className="space-y-3 min-[1000px]:hidden">
                 {filteredListTransactions.map((tx) => {
                   const reviewReasonKeys = backendReviewReasonById.get(tx.id) ?? getReviewReasonKeys(tx, duplicateTransactionIds)
                   return (

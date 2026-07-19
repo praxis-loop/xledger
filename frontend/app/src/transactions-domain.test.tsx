@@ -420,7 +420,8 @@ describe('transactions domain', () => {
 
     const page = await screen.findByTestId('mobile-transaction-page')
     expect(page).toHaveAttribute('data-ui', 'ios-transactions-page')
-    expect(within(page).getByRole('radiogroup', { name: /transaction view/i })).toBeInTheDocument()
+    const viewControl = within(page).getByRole('radiogroup', { name: /transaction view/i })
+    expect(viewControl).toHaveClass('md:w-full', 'min-[1000px]:w-auto')
     expect(within(page).getAllByRole('button', { name: /add transaction/i })).toHaveLength(1)
 
     const smartViews = within(page).getByRole('region', { name: /smart views/i })
