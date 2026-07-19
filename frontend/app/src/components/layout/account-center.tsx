@@ -31,7 +31,7 @@ export interface AccountCenterValue {
   openNotifications: () => void
   openHelp: () => void
   openMobileDevice: () => void
-  selectLanguage: (language: string) => Promise<void>
+  selectLanguage: (language: SupportedLanguage) => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -151,7 +151,7 @@ export function AccountCenterProvider({ children }: PropsWithChildren) {
   }, [])
 
   const selectLanguage = useCallback(
-    async (language: string) => {
+    async (language: SupportedLanguage) => {
       setActionError(null)
       setLanguagePending(true)
       try {

@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { usePwaInstall } from '@/features/pwa/use-pwa-install'
 import { usePwaUpdate } from '@/features/pwa/use-pwa-update'
-import { supportedLanguageOptions } from '@/i18n'
+import { resolveSupportedLanguage, supportedLanguageOptions } from '@/i18n'
 import { useAccountCenter } from './account-center'
 
 export function TopBar() {
@@ -13,8 +13,10 @@ export function TopBar() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const {
+    actionError,
     currentLanguage,
     displayName,
+    languagePending,
     openHelp,
     openMobileDevice,
     openNotifications,
@@ -62,10 +64,11 @@ export function TopBar() {
           <select
             value={currentLanguage}
             onChange={(event) => {
-              void selectLanguage(event.target.value)
+              void selectLanguage(resolveSupportedLanguage(event.target.value))
             }}
             className="h-11 w-[88px] cursor-pointer rounded-lg border border-black/10 bg-white/80 px-2 text-sm font-medium text-[#3a3a3c] transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0066cc] motion-reduce:transition-none xl:h-10 xl:w-auto xl:border-outline/20 xl:bg-surface-container-low xl:font-normal xl:text-on-surface-variant"
             aria-label={t('layout.topBar.languageLabel')}
+            disabled={languagePending}
           >
             {supportedLanguageOptions.map((language) => (
               <option key={language.code} value={language.code}>
@@ -160,6 +163,15 @@ export function TopBar() {
           </Button>
         </div>
       </div>
+      {actionError ? (
+        <p
+          role="alert"
+          aria-live="assertive"
+          className="absolute right-[max(1rem,var(--safe-area-right))] top-full mt-2 rounded-lg bg-error px-3 py-2 text-sm font-medium text-white shadow-ambient"
+        >
+          {actionError}
+        </p>
+      ) : null}
     </header>
   )
 }
