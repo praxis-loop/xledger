@@ -68,6 +68,7 @@ describe('mobile iOS design primitives', () => {
 
     const englishControl = screen.getByRole('radio', { name: 'English' })
     expect(englishControl.closest('label')).toHaveClass('min-h-11')
+    expect(englishControl).toHaveClass('absolute', 'inset-0', 'z-10', 'opacity-0')
   })
 
   it('disables every segmented option while a selection is pending', () => {

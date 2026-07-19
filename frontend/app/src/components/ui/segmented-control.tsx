@@ -59,10 +59,10 @@ export function SegmentedControl<T extends string>({
               checked={selected}
               onChange={() => onChange(option.value)}
               disabled={disabled}
-              className="peer sr-only"
+              className="peer absolute inset-0 z-10 cursor-pointer appearance-none opacity-0 disabled:cursor-not-allowed"
             />
             <span className="pointer-events-none absolute inset-0 rounded-lg ring-[#0066cc] peer-focus-visible:ring-2 peer-focus-visible:ring-offset-1" />
-            <span className="relative">{option.label}</span>
+            <span className="pointer-events-none relative">{option.label}</span>
           </label>
         )
       })}
