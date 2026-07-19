@@ -1183,11 +1183,11 @@ export function TransactionsPage() {
   const exportTotal = listTransactionsQuery.data?.pagination.total ?? filteredListTransactions.length
 
   return (
-    <div className="space-y-5">
+    <div className="-mx-4 w-[calc(100%+2rem)] space-y-5 px-4 min-[1000px]:mx-0 min-[1000px]:w-auto min-[1000px]:px-0">
       <section
         data-testid="mobile-transaction-page"
         data-ui="ios-transactions-page"
-        className="-mx-4 border-0 bg-transparent px-4 shadow-none min-[1000px]:mx-0 min-[1000px]:rounded-2xl min-[1000px]:border min-[1000px]:border-outline/15 min-[1000px]:bg-surface-container-lowest min-[1000px]:p-6 min-[1000px]:shadow-ambient"
+        className="border-0 bg-transparent shadow-none min-[1000px]:rounded-2xl min-[1000px]:border min-[1000px]:border-outline/15 min-[1000px]:bg-surface-container-lowest min-[1000px]:p-6 min-[1000px]:shadow-ambient"
       >
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h2 className="font-headline text-[34px] font-extrabold leading-tight text-primary min-[1000px]:text-[42px]">
@@ -1327,7 +1327,10 @@ export function TransactionsPage() {
                   </button>
                 ))}
               </div>
-              <div className="mb-4 flex flex-nowrap items-center gap-2 overflow-x-auto pb-1 min-[1000px]:flex-wrap min-[1000px]:overflow-visible">
+              <div
+                data-ui="transaction-quick-filters"
+                className="mb-4 flex min-w-0 max-w-full flex-nowrap items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden min-[1000px]:flex-wrap min-[1000px]:overflow-visible"
+              >
                 {quickFilters.map((filter) => (
                   <button
                     key={filter.id}

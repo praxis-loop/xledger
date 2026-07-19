@@ -22,6 +22,23 @@ describe('mobile iOS design primitives', () => {
     )
   })
 
+  it('keeps quick filters horizontally scrollable without exposing a scrollbar', () => {
+    const source = readFileSync(resolve(__dirname, 'pages/transactions-page.tsx'), 'utf8')
+
+    expect(source).toMatch(
+      /overflow-x-auto[^\"]*\[scrollbar-width:none\][^\"]*\[&::-webkit-scrollbar\]:hidden/,
+    )
+  })
+
+  it('owns the mobile transaction gutter without creating a parent scroll range', () => {
+    const source = readFileSync(resolve(__dirname, 'pages/transactions-page.tsx'), 'utf8')
+
+    expect(source).toContain(
+      'className="-mx-4 w-[calc(100%+2rem)] space-y-5 px-4 min-[1000px]:mx-0 min-[1000px]:w-auto min-[1000px]:px-0"',
+    )
+    expect(source).not.toMatch(/data-testid="mobile-transaction-page"[\s\S]{0,180}className="-mx-4/)
+  })
+
   it('exposes segmented options as a controlled radio group', async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()

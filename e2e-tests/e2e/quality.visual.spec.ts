@@ -12,11 +12,21 @@ async function prepareVisualSession(page: Page, testInfo: Parameters<typeof boot
   await bootstrapAuthedSession(page, testInfo)
 }
 
+async function expectNoPageHorizontalOverflow(page: Page) {
+  const widths = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }))
+
+  expect(widths.scrollWidth).toBeLessThanOrEqual(widths.clientWidth)
+}
+
 async function captureDashboard(page: Page, snapshotName: string, navigate = true) {
   if (navigate) {
     await page.goto('/dashboard', { waitUntil: 'networkidle' })
   }
   await expect(page.getByRole('heading', { name: /Financial Overview|财务概览/ })).toBeVisible()
+  await expectNoPageHorizontalOverflow(page)
   await expect(page).toHaveScreenshot(snapshotName, {
     animations: 'disabled',
     fullPage: false,
@@ -32,6 +42,7 @@ async function captureVisualBaselines(
   for (const route of routes) {
     await page.goto(route.path, { waitUntil: 'networkidle' })
     await expect(page.getByRole('heading', { name: route.heading })).toBeVisible()
+    await expectNoPageHorizontalOverflow(page)
     await expect(page).toHaveScreenshot(`visual-${viewportTag}-${route.snapshotKey}.png`, {
       animations: 'disabled',
       fullPage: false,
