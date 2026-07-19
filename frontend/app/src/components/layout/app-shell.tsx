@@ -14,7 +14,7 @@ export function AppShell({ children }: PropsWithChildren) {
         <SideNav />
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
           <TopBar />
-          <main className="pb-mobile-nav mx-auto w-full max-w-[1680px] flex-1 pl-[max(1rem,var(--safe-area-left))] pr-[max(1rem,var(--safe-area-right))] pt-4 min-[1000px]:p-5 xl:p-6">
+          <main className="pb-mobile-nav mx-auto w-full max-w-[1680px] flex-1 pl-[max(1rem,var(--safe-area-left))] pr-[max(1rem,var(--safe-area-right))] pt-[calc(var(--safe-area-top)+1rem)] min-[1000px]:px-5 min-[1000px]:pb-5 min-[1000px]:pt-4 xl:px-6 xl:pb-6">
             <FirstLoginOnboarding />
             {children}
           </main>

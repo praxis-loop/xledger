@@ -100,6 +100,11 @@ describe('App shell', () => {
     expect(topBar).toHaveAttribute('data-ui', 'desktop-top-bar')
     expect(topBar).toHaveClass('max-[999px]:hidden')
     expect(main).toHaveClass('pb-mobile-nav')
+    expect(main).toHaveClass(
+      'pt-[calc(var(--safe-area-top)+1rem)]',
+      'min-[1000px]:pt-4',
+    )
+    expect(main).not.toHaveClass('pt-4')
   })
 
   it('keeps profile and mobile device actions working from the desktop app shell', async () => {
