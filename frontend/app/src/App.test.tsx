@@ -102,7 +102,8 @@ describe('App shell', () => {
     expect(main).toHaveClass('pb-mobile-nav')
     expect(main).toHaveClass(
       'pt-[calc(var(--safe-area-top)+1rem)]',
-      'min-[1000px]:pt-4',
+      'min-[1000px]:pt-5',
+      'xl:pt-6',
     )
     expect(main).not.toHaveClass('pt-4')
   })
