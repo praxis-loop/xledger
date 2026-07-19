@@ -45,15 +45,35 @@ describe('standalone import layout', () => {
   it('renders a compact three-step import surface with guidance', () => {
     renderImportPage()
 
-    expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /back/i })).toHaveClass('min-[1000px]:hidden')
+    expect(screen.getByTestId('import-page-title')).toHaveClass('text-[32px]', 'min-[1000px]:text-2xl')
     const progress = screen.getByRole('list', { name: /import progress/i })
     expect(progress).toHaveAttribute('data-ui', 'ios-import-stepper')
+    expect(progress).toHaveClass('min-[1000px]:hidden')
     expect(within(progress).getAllByRole('listitem')).toHaveLength(3)
     expect(within(progress).getAllByRole('listitem')[0]).toHaveAttribute('aria-current', 'step')
     expect(screen.getByTestId('compact-import-dropzone')).toHaveAttribute('data-ui', 'ios-compact-upload')
-    expect(screen.getByTestId('compact-import-dropzone')).toHaveClass('min-h-[190px]', 'max-h-[220px]')
+    expect(screen.getByTestId('compact-import-dropzone')).toHaveClass(
+      'min-h-[190px]',
+      'max-h-[220px]',
+      'min-[1000px]:min-h-0',
+      'min-[1000px]:max-h-none',
+      'min-[1000px]:p-12',
+    )
     expect(screen.getByRole('button', { name: /browse/i })).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: /import guidance/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /browse/i })).toHaveClass('min-[1000px]:hidden')
+    expect(screen.getByRole('region', { name: /import guidance/i })).toHaveClass('min-[1000px]:hidden')
+  })
+
+  it('preserves whole-surface file selection for the desktop upload area', async () => {
+    const user = userEvent.setup()
+    renderImportPage()
+    const input = screen.getByLabelText(/csv file/i)
+    const inputClick = vi.spyOn(input, 'click')
+
+    await user.click(screen.getByTestId('compact-import-dropzone'))
+
+    expect(inputClick).toHaveBeenCalledTimes(1)
   })
 
   it('returns to the source page and otherwise falls back to Me', async () => {

@@ -76,19 +76,24 @@ export function ImportPage() {
       <header className="space-y-3">
         <Button
           variant="ghost"
-          className="min-h-11 px-0 text-on-surface-variant hover:bg-transparent hover:text-primary"
+          className="min-h-11 px-0 text-on-surface-variant hover:bg-transparent hover:text-primary min-[1000px]:hidden"
           onClick={handleBack}
         >
           <ArrowLeft aria-hidden="true" size={20} />
           {t('import.back')}
         </Button>
-        <h1 className="text-[32px] font-bold leading-tight tracking-tight">{t('import.title')}</h1>
+        <h1
+          data-testid="import-page-title"
+          className="text-[32px] font-bold leading-tight tracking-tight min-[1000px]:text-2xl"
+        >
+          {t('import.title')}
+        </h1>
       </header>
 
       <ol
         aria-label={t('import.progressLabel')}
         data-ui="ios-import-stepper"
-        className="grid grid-cols-3 gap-2"
+        className="grid grid-cols-3 gap-2 min-[1000px]:hidden"
       >
         {importSteps.map((stepName, index) => {
           const labelKey = stepName === 'upload'
@@ -122,17 +127,21 @@ export function ImportPage() {
           <div
             data-testid="compact-import-dropzone"
             data-ui="ios-compact-upload"
-            className="flex min-h-[190px] max-h-[220px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-outline/30 px-5 py-6 text-center transition-colors hover:border-primary min-[1000px]:px-10"
+            className="flex min-h-[190px] max-h-[220px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-outline/30 px-5 py-6 text-center transition-colors hover:border-primary min-[1000px]:min-h-0 min-[1000px]:max-h-none min-[1000px]:p-12"
             onDrop={handleDrop}
             onDragOver={(event) => event.preventDefault()}
+            onClick={() => fileInputRef.current?.click()}
           >
-            <Upload className="mb-3 text-on-surface-variant" size={40} aria-hidden="true" />
-            <p className="text-base font-semibold">{t('import.selectFile')}</p>
-            <p className="mt-1 text-sm text-on-surface-variant">{t('import.supportedFormats')}</p>
+            <Upload className="mb-3 h-10 w-10 text-on-surface-variant min-[1000px]:mb-4 min-[1000px]:h-12 min-[1000px]:w-12" aria-hidden="true" />
+            <p className="text-base font-semibold min-[1000px]:text-lg">{t('import.selectFile')}</p>
+            <p className="mt-1 text-sm text-on-surface-variant min-[1000px]:mt-2">{t('import.supportedFormats')}</p>
             <Button
               variant="secondary"
-              className="mt-4 min-h-11"
-              onClick={() => fileInputRef.current?.click()}
+              className="mt-4 min-h-11 min-[1000px]:hidden"
+              onClick={(event) => {
+                event.stopPropagation()
+                fileInputRef.current?.click()
+              }}
             >
               {t('import.browse')}
             </Button>
@@ -142,6 +151,7 @@ export function ImportPage() {
               accept=".csv"
               aria-label={t('import.csvFileLabel')}
               className="hidden"
+              onClick={(event) => event.stopPropagation()}
               onChange={handleFileChange}
             />
           </div>
@@ -149,7 +159,7 @@ export function ImportPage() {
           <section
             role="region"
             aria-labelledby="import-guidance-title"
-            className="overflow-hidden rounded-2xl border border-outline/15 bg-surface-container-lowest"
+            className="overflow-hidden rounded-2xl border border-outline/15 bg-surface-container-lowest min-[1000px]:hidden"
           >
             <h2 id="import-guidance-title" className="px-4 pb-2 pt-4 text-sm font-bold">
               {t('import.guidanceTitle')}
