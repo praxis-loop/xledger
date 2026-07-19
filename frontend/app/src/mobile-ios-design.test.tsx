@@ -38,6 +38,23 @@ describe('mobile iOS design primitives', () => {
     expect(onChange).toHaveBeenCalledWith('today')
   })
 
+  it('gives each clickable segment a minimum 44px touch target', () => {
+    render(
+      <SegmentedControl
+        ariaLabel="Language"
+        value="en"
+        options={[
+          { value: 'en', label: 'English' },
+          { value: 'zh', label: '\u4e2d\u6587' },
+        ]}
+        onChange={vi.fn()}
+      />,
+    )
+
+    const englishControl = screen.getByRole('radio', { name: 'English' })
+    expect(englishControl.closest('label')).toHaveClass('min-h-11')
+  })
+
   it('disables every segmented option while a selection is pending', () => {
     render(
       <SegmentedControl

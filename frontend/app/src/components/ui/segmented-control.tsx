@@ -46,7 +46,7 @@ export function SegmentedControl<T extends string>({
             key={option.value}
             htmlFor={optionId}
             className={cn(
-              'relative flex min-h-10 cursor-pointer items-center justify-center rounded-lg px-3 text-[13px] font-semibold text-[#3a3a3c] transition-colors motion-reduce:transition-none',
+              'relative flex min-h-11 cursor-pointer items-center justify-center rounded-lg px-3 text-[13px] font-semibold text-[#3a3a3c] transition-colors motion-reduce:transition-none',
               selected && 'bg-white text-[#0066cc] shadow-[0_1px_2px_rgba(0,0,0,0.12)]',
               disabled && 'cursor-not-allowed opacity-60',
             )}
