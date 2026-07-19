@@ -269,6 +269,13 @@ export function ImportPage() {
               {t('common.cancel')}
             </button>
           </div>
+
+          {confirmMutation.isError && (
+            <div role="alert" className="flex items-center gap-2 rounded-xl bg-red-50 p-4 text-red-700">
+              <AlertCircle size={20} aria-hidden="true" />
+              <p>{confirmMutation.error instanceof Error ? confirmMutation.error.message : t('errors.serverError')}</p>
+            </div>
+          )}
         </div>
       )}
 

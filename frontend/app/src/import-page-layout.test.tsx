@@ -159,4 +159,39 @@ describe('standalone import layout', () => {
     const progress = screen.getByRole('list', { name: /import progress/i })
     expect(within(progress).getAllByRole('listitem')[2]).toHaveAttribute('aria-current', 'step')
   })
+
+  it('keeps the file and mapping visible after confirmation fails and allows retry', async () => {
+    vi.mocked(importCSVPreview).mockResolvedValueOnce({
+      format: 'csv',
+      columns: ['date', 'amount'],
+      sample_rows: [['2026-01-01', '10']],
+      mappingSlots: ['date', 'amount'],
+      mappingCandidates: { date: ['date'], amount: ['amount'] },
+      suggested_mapping: { date: 'date', amount: 'amount' },
+    })
+    vi.mocked(importCSVConfirm)
+      .mockRejectedValueOnce(new Error('Confirmation failed'))
+      .mockResolvedValueOnce({ success_count: 1, skip_count: 0, fail_count: 0 })
+    const user = userEvent.setup()
+    renderImportPage()
+
+    await user.upload(
+      screen.getByLabelText(/csv file/i),
+      new File(['date,amount\n2026-01-01,10'], 'retry.csv', { type: 'text/csv' }),
+    )
+    const mappingControls = await screen.findAllByRole('combobox')
+    await user.selectOptions(mappingControls[0], 'amount')
+    await user.click(screen.getByRole('button', { name: /confirm import/i }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Confirmation failed')
+    expect(screen.getByText('retry.csv')).toBeInTheDocument()
+    expect(mappingControls[0]).toHaveValue('amount')
+
+    await user.click(screen.getByRole('button', { name: /confirm import/i }))
+    expect(await screen.findByRole('heading', { name: /import successful/i })).toBeInTheDocument()
+    expect(importCSVConfirm).toHaveBeenCalledTimes(2)
+    expect(vi.mocked(importCSVConfirm).mock.calls[1][0].get('mapping')).toBe(
+      JSON.stringify({ date: 'amount', amount: 'amount' }),
+    )
+  })
 })
