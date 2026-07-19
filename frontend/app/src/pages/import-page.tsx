@@ -1,14 +1,21 @@
-import { useState, useRef } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Upload, AlertCircle, CheckCircle } from 'lucide-react'
+import { AlertCircle, ArrowLeft, CheckCircle, Upload } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
-import { importCSVPreview, importCSVConfirm } from '@/features/management/management-api'
+import { Button } from '@/components/ui/button'
+import { importCSVConfirm, importCSVPreview } from '@/features/management/management-api'
 import type { ImportPreviewResponse } from '@/features/management/management-api'
 
 type ImportStep = 'upload' | 'mapping' | 'result'
+type ImportLocationState = { from?: '/me' | '/transactions' }
+
+const importSteps: ImportStep[] = ['upload', 'mapping', 'result']
 
 export function ImportPage() {
   const { t } = useTranslation()
+  const location = useLocation()
+  const navigate = useNavigate()
   const [step, setStep] = useState<ImportStep>('upload')
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<ImportPreviewResponse | null>(null)
@@ -28,10 +35,10 @@ export function ImportPage() {
   })
 
   const confirmMutation = useMutation({
-    mutationFn: async (mapping: Record<string, string>) => {
+    mutationFn: async (currentMapping: Record<string, string>) => {
       const formData = new FormData()
       if (file) formData.append('file', file)
-      formData.append('mapping', JSON.stringify(mapping))
+      formData.append('mapping', JSON.stringify(currentMapping))
       const response = await importCSVConfirm(formData)
       return response
     },
@@ -40,93 +47,175 @@ export function ImportPage() {
     },
   })
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0]
-    if (selectedFile) {
-      setFile(selectedFile)
-      const formData = new FormData()
-      formData.append('file', selectedFile)
-      previewMutation.mutate(formData)
-    }
+  const submitFile = (selectedFile: File) => {
+    setFile(selectedFile)
+    const formData = new FormData()
+    formData.append('file', selectedFile)
+    previewMutation.mutate(formData)
   }
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    const droppedFile = e.dataTransfer.files[0]
-    if (droppedFile && droppedFile.name.endsWith('.csv')) {
-      setFile(droppedFile)
-      const formData = new FormData()
-      formData.append('file', droppedFile)
-      previewMutation.mutate(formData)
-    }
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0]
+    if (selectedFile) submitFile(selectedFile)
   }
+
+  const handleDrop = (event: React.DragEvent) => {
+    event.preventDefault()
+    const droppedFile = event.dataTransfer.files[0]
+    if (droppedFile && droppedFile.name.endsWith('.csv')) submitFile(droppedFile)
+  }
+
+  const locationState = location.state as ImportLocationState | null
+  const handleBack = () => {
+    navigate(locationState?.from === '/transactions' ? '/transactions' : '/me')
+  }
+  const activeStepIndex = importSteps.indexOf(step)
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold">{t('import.title')}</h1>
+    <div className="mx-auto max-w-2xl space-y-5 min-[1000px]:space-y-6">
+      <header className="space-y-3">
+        <Button
+          variant="ghost"
+          className="min-h-11 px-0 text-on-surface-variant hover:bg-transparent hover:text-primary"
+          onClick={handleBack}
+        >
+          <ArrowLeft aria-hidden="true" size={20} />
+          {t('import.back')}
+        </Button>
+        <h1 className="text-[32px] font-bold leading-tight tracking-tight">{t('import.title')}</h1>
+      </header>
+
+      <ol
+        aria-label={t('import.progressLabel')}
+        data-ui="ios-import-stepper"
+        className="grid grid-cols-3 gap-2"
+      >
+        {importSteps.map((stepName, index) => {
+          const labelKey = stepName === 'upload'
+            ? 'import.stepUpload'
+            : stepName === 'mapping'
+              ? 'import.stepMapping'
+              : 'import.stepResult'
+          const isActive = index === activeStepIndex
+          const isComplete = index < activeStepIndex
+
+          return (
+            <li
+              key={stepName}
+              aria-current={isActive ? 'step' : undefined}
+              className="min-w-0 space-y-2"
+            >
+              <span
+                aria-hidden="true"
+                className={`block h-1.5 rounded-full ${isActive || isComplete ? 'bg-primary' : 'bg-surface-container-highest'}`}
+              />
+              <span className={`block truncate text-xs font-semibold ${isActive ? 'text-primary' : 'text-on-surface-variant'}`}>
+                {t(labelKey)}
+              </span>
+            </li>
+          )
+        })}
+      </ol>
 
       {step === 'upload' && (
-        <div
-          className="border-2 border-dashed border-outline/30 rounded-2xl p-12 text-center cursor-pointer hover:border-primary transition-colors"
-          onDrop={handleDrop}
-          onDragOver={(e) => e.preventDefault()}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <Upload className="mx-auto mb-4 text-on-surface-variant" size={48} />
-          <p className="text-lg font-medium">{t('import.selectFile')}</p>
-          <p className="text-sm text-on-surface-variant mt-2">
-            {t('import.supportedFormats')}
-          </p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv"
-            className="hidden"
-            onChange={handleFileChange}
-          />
+        <>
+          <div
+            data-testid="compact-import-dropzone"
+            data-ui="ios-compact-upload"
+            className="flex min-h-[190px] max-h-[220px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-outline/30 px-5 py-6 text-center transition-colors hover:border-primary min-[1000px]:px-10"
+            onDrop={handleDrop}
+            onDragOver={(event) => event.preventDefault()}
+          >
+            <Upload className="mb-3 text-on-surface-variant" size={40} aria-hidden="true" />
+            <p className="text-base font-semibold">{t('import.selectFile')}</p>
+            <p className="mt-1 text-sm text-on-surface-variant">{t('import.supportedFormats')}</p>
+            <Button
+              variant="secondary"
+              className="mt-4 min-h-11"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {t('import.browse')}
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              aria-label={t('import.csvFileLabel')}
+              className="hidden"
+              onChange={handleFileChange}
+            />
+          </div>
+
+          <section
+            role="region"
+            aria-labelledby="import-guidance-title"
+            className="overflow-hidden rounded-2xl border border-outline/15 bg-surface-container-lowest"
+          >
+            <h2 id="import-guidance-title" className="px-4 pb-2 pt-4 text-sm font-bold">
+              {t('import.guidanceTitle')}
+            </h2>
+            {[
+              ['csvTitle', 'csvDescription'],
+              ['encodingTitle', 'encodingDescription'],
+              ['privacyTitle', 'privacyDescription'],
+            ].map(([title, description], index) => (
+              <div
+                key={title}
+                className={`px-4 py-3 ${index > 0 ? 'border-t border-outline/10' : ''}`}
+              >
+                <h3 className="text-sm font-semibold">{t(`import.${title}`)}</h3>
+                <p className="mt-0.5 text-sm text-on-surface-variant">{t(`import.${description}`)}</p>
+              </div>
+            ))}
+          </section>
+        </>
+      )}
+
+      {file && (
+        <div className="flex min-w-0 items-center gap-2 rounded-xl bg-surface-container px-4 py-3 text-sm">
+          <span className="shrink-0 font-semibold">{t('import.selectedFile')}</span>
+          <span className="truncate text-on-surface-variant">{file.name}</span>
         </div>
       )}
 
       {previewMutation.isPending && (
-        <div className="text-center py-8">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="py-4 text-center" role="status">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
           <p className="mt-2 text-on-surface-variant">{t('common.loading')}</p>
         </div>
       )}
 
       {previewMutation.isError && (
-        <div className="flex items-center gap-2 p-4 rounded-xl bg-red-50 text-red-700">
-          <AlertCircle size={20} />
+        <div role="alert" className="flex items-center gap-2 rounded-xl bg-red-50 p-4 text-red-700">
+          <AlertCircle size={20} aria-hidden="true" />
           <p>{previewMutation.error instanceof Error ? previewMutation.error.message : t('errors.serverError')}</p>
         </div>
       )}
 
       {step === 'mapping' && preview && (
-        <div className="space-y-6">
-          {/* Format detection result */}
+        <div className="space-y-5 min-[1000px]:space-y-6">
           <div className="rounded-xl bg-surface-container p-4">
             <p className="text-sm font-medium">
               {t('import.detectedFormat')}: <span className="text-primary">{preview.format}</span>
             </p>
           </div>
 
-          {/* Preview table */}
           <div className="overflow-x-auto rounded-xl border border-outline/15">
             <table className="w-full text-sm">
               <thead className="bg-surface-container">
                 <tr>
                   <th className="px-4 py-2 text-left">#</th>
-                  {preview.columns.slice(0, 5).map((h) => (
-                    <th key={h} className="px-4 py-2 text-left">{h}</th>
+                  {preview.columns.slice(0, 5).map((heading) => (
+                    <th key={heading} className="px-4 py-2 text-left">{heading}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {preview.sample_rows.slice(0, 3).map((row, i) => (
-                  <tr key={i} className="border-t border-outline/10">
-                    <td className="px-4 py-2 text-on-surface-variant">#{i + 1}</td>
-                    {row.slice(0, 5).map((cell, j) => (
-                      <td key={j} className="px-4 py-2">{cell}</td>
+                {preview.sample_rows.slice(0, 3).map((row, rowIndex) => (
+                  <tr key={rowIndex} className="border-t border-outline/10">
+                    <td className="px-4 py-2 text-on-surface-variant">#{rowIndex + 1}</td>
+                    {row.slice(0, 5).map((cell, cellIndex) => (
+                      <td key={cellIndex} className="px-4 py-2">{cell}</td>
                     ))}
                   </tr>
                 ))}
@@ -134,38 +223,38 @@ export function ImportPage() {
             </table>
           </div>
 
-          {/* Field mapping */}
           <div className="space-y-3">
             <h3 className="font-semibold">{t('import.fieldMapping')}</h3>
-            {Object.entries(mapping).map(([field, csvCol]) => (
-              <div key={field} className="flex items-center gap-4">
-                <label className="w-32 text-sm font-medium">{field}</label>
+            {Object.entries(mapping).map(([field, csvColumn]) => (
+              <div key={field} className="flex items-center gap-3 min-[1000px]:gap-4">
+                <label className="w-28 text-sm font-medium min-[1000px]:w-32">{field}</label>
                 <select
-                  value={csvCol}
-                  onChange={(e) => setMapping({ ...mapping, [field]: e.target.value })}
-                  className="flex-1 rounded-xl border border-outline/15 px-4 py-2"
+                  value={csvColumn}
+                  onChange={(event) => setMapping({ ...mapping, [field]: event.target.value })}
+                  className="min-h-11 min-w-0 flex-1 rounded-xl border border-outline/15 px-3 py-2 min-[1000px]:px-4"
                 >
                   <option value="">--</option>
-                  {preview.columns.map((h) => (
-                    <option key={h} value={h}>{h}</option>
+                  {preview.columns.map((heading) => (
+                    <option key={heading} value={heading}>{heading}</option>
                   ))}
                 </select>
               </div>
             ))}
           </div>
 
-          {/* Action buttons */}
-          <div className="flex gap-4">
+          <div className="flex gap-3 min-[1000px]:gap-4">
             <button
+              type="button"
               onClick={() => confirmMutation.mutate(mapping)}
               disabled={confirmMutation.isPending}
-              className="flex-1 rounded-xl bg-primary py-3 text-white font-semibold disabled:opacity-50"
+              className="min-h-11 flex-1 rounded-xl bg-primary py-3 font-semibold text-white disabled:opacity-50"
             >
               {confirmMutation.isPending ? t('common.loading') : t('import.confirm')}
             </button>
             <button
+              type="button"
               onClick={() => { setStep('upload'); setFile(null); setPreview(null) }}
-              className="flex-1 rounded-xl border border-outline/15 py-3"
+              className="min-h-11 flex-1 rounded-xl border border-outline/15 py-3"
             >
               {t('common.cancel')}
             </button>
@@ -174,8 +263,8 @@ export function ImportPage() {
       )}
 
       {step === 'result' && confirmMutation.data && (
-        <div className="space-y-6 text-center py-8">
-          <CheckCircle className="mx-auto text-emerald-500" size={64} />
+        <div className="space-y-5 py-4 text-center min-[1000px]:space-y-6 min-[1000px]:py-8">
+          <CheckCircle className="mx-auto text-emerald-500" size={64} aria-hidden="true" />
           <h2 className="text-xl font-bold">{t('import.success')}</h2>
           <p className="text-on-surface-variant">
             {confirmMutation.data.success_count} {t('import.successRows')}
@@ -183,8 +272,9 @@ export function ImportPage() {
             {confirmMutation.data.fail_count > 0 && ` • ${confirmMutation.data.fail_count} ${t('import.failed')}`}
           </p>
           <button
+            type="button"
             onClick={() => { setStep('upload'); setFile(null); setPreview(null) }}
-            className="rounded-xl bg-primary px-8 py-3 text-white font-semibold"
+            className="min-h-11 rounded-xl bg-primary px-8 py-3 font-semibold text-white"
           >
             {t('import.importMore')}
           </button>
