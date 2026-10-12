@@ -5,6 +5,32 @@ export default {
   theme: {
     extend: {
       colors: {
+        // iOS layer (DESIGN.md is normative). Prefer these over the legacy Material tokens below.
+        action: {
+          DEFAULT: '#0066cc',
+          hover: '#0059b3',
+          tint: '#eaf3ff',
+          'tint-pressed': '#dbeaff',
+        },
+        ground: '#f2f2f7',
+        'segment-track': '#e3e3e8',
+        ink: {
+          DEFAULT: '#191c1e',
+          secondary: '#434653',
+          tertiary: '#6e6e73',
+          control: '#3a3a3c',
+        },
+        income: {
+          DEFAULT: '#176b3a',
+          tint: '#e8f7ee',
+          edge: '#b7ebcc',
+        },
+        expense: {
+          DEFAULT: '#b4233c',
+          tint: '#fdecef',
+          edge: '#f5c2c7',
+        },
+        // Legacy Material layer (Stitch era): migrate away as surfaces are touched.
         background: '#f7f9fc',
         surface: '#f7f9fc',
         'surface-bright': '#f7f9fc',

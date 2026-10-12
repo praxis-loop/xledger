@@ -192,7 +192,7 @@ func newReportingFixture(t *testing.T) reportingFixture {
 	if err != nil {
 		t.Fatalf("seed wallet: %v", err)
 	}
-	bank, err := accountRepo.Create("user-1", accounting.AccountCreateInput{Name: "Bank", Type: "bank", InitialBalance: 200})
+	bank, err := accountRepo.Create("user-1", accounting.AccountCreateInput{Name: "Bank", Type: "debit", InitialBalance: 200})
 	if err != nil {
 		t.Fatalf("seed bank: %v", err)
 	}
@@ -216,4 +216,28 @@ func newReportingFixture(t *testing.T) reportingFixture {
 	}
 
 	return reportingFixture{accountRepo: accountRepo, txnRepo: txnRepo, categoryService: categoryService, primaryLedger: primaryLedger, secondaryLedger: secondaryLedger}
+}
+
+func TestOverview_TotalAssetsExcludesArchivedAccounts(t *testing.T) {
+	ctx := context.Background()
+	deps := newReportingFixture(t)
+
+	archived, err := deps.accountRepo.Create("user-1", accounting.AccountCreateInput{Name: "Old card", Type: "debit", InitialBalance: 500})
+	if err != nil {
+		t.Fatalf("seed account to archive: %v", err)
+	}
+	archivedAt := time.Date(2026, 3, 2, 0, 0, 0, 0, time.UTC)
+	archived.ArchivedAt = &archivedAt
+	if _, saved, err := deps.accountRepo.SaveByIDForUser("user-1", archived.ID, archived); err != nil || !saved {
+		t.Fatalf("archive account: saved=%v err=%v", saved, err)
+	}
+
+	overview := NewOverviewService(NewRepository(deps.accountRepo, deps.txnRepo, deps.categoryService), nil)
+	result, err := overview.GetOverview(ctx, "user-1", OverviewQuery{})
+	if err != nil {
+		t.Fatalf("overview: %v", err)
+	}
+	if result.TotalAssets != 300 {
+		t.Fatalf("expected archived account excluded from total_assets 300, got %v", result.TotalAssets)
+	}
 }

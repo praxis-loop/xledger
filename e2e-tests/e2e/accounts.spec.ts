@@ -2,7 +2,7 @@ import { expect, test } from './fixture'
 import {
   bootstrapAuthedSession,
   createAccountOnAccountsPage,
-  createLedgerOnAccountsPage,
+  createLedgerInSettings,
   openAccounts,
   uniqueName,
 } from './helpers/ui-flows'
@@ -16,7 +16,7 @@ test('accounts flow: create account and ledger', async ({ page, recordToReport }
   await createAccountOnAccountsPage(page, { name: accountName, initialBalance: '1000' })
 
   const ledgerName = uniqueName('E2E Ledger')
-  await createLedgerOnAccountsPage(page, ledgerName)
+  await createLedgerInSettings(page, ledgerName)
 
   const [accounts, ledgers] = await Promise.all([
     apiClient.listAccounts(session.authSession.accessToken),

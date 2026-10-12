@@ -6,9 +6,11 @@ import {
   createCategory,
   createLedger,
   createPAT,
+  createTag,
   confirmQuickAdd,
   deleteCategory,
   deleteLedger,
+  deleteTag,
   exportCsv,
   generateOCRShortcut,
   generateShortcut,
@@ -181,15 +183,44 @@ export function useDeleteCategory() {
   })
 }
 
+export function useCreateTag() {
+  const { session } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (input: { name: string }) => createTag(session!.accessToken, input),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['management', 'tags'] })
+      await queryClient.invalidateQueries({ queryKey: ['transactions', 'tags'] })
+    },
+  })
+}
+
+export function useDeleteTag() {
+  const { session } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => deleteTag(session!.accessToken, id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['management', 'tags'] })
+      await queryClient.invalidateQueries({ queryKey: ['transactions', 'tags'] })
+    },
+  })
+}
+
 export function useUpdateAccount() {
   const { session } = useAuth()
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (input: { id: string; name?: string; type?: string }) => updateAccount(session!.accessToken, input.id, { name: input.name, type: input.type }),
+    mutationFn: (input: { id: string; name?: string; type?: string; archived?: boolean }) =>
+      updateAccount(session!.accessToken, input.id, { name: input.name, type: input.type, archived: input.archived }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['management', 'accounts'] })
       await queryClient.invalidateQueries({ queryKey: ['transactions', 'accounts'] })
+      // Archiving changes total assets.
+      await queryClient.invalidateQueries({ queryKey: ['reporting', 'overview'] })
     },
   })
 }

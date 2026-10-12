@@ -18,7 +18,7 @@ describe('mobile iOS design primitives', () => {
       /data-testid="desktop-transaction-table"[\s\S]{0,180}className="hidden[^"]*min-\[1000px\]:block"/,
     )
     expect(source).toMatch(
-      /data-testid="mobile-transaction-cards"[\s\S]{0,120}className="space-y-3 min-\[1000px\]:hidden"/,
+      /data-testid="mobile-transaction-cards"[\s\S]{0,120}className="divide-y[^"]*min-\[1000px\]:hidden"/,
     )
   })
 

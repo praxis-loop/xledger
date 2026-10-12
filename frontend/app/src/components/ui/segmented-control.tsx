@@ -33,7 +33,7 @@ export function SegmentedControl<T extends string>({
       aria-busy={disabled}
       data-ui="ios-segmented-control"
       className={cn(
-        'grid min-h-11 w-full grid-flow-col auto-cols-fr rounded-xl bg-[#e3e3e8] p-0.5 motion-reduce:transition-none md:w-auto md:min-w-[360px]',
+        'grid min-h-11 w-full grid-flow-col auto-cols-fr rounded-xl bg-[#e3e3e8] p-0.5 motion-reduce:transition-none md:w-auto',
         className,
       )}
     >

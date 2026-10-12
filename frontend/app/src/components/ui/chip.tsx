@@ -6,16 +6,16 @@ interface ChipProps extends PropsWithChildren {
 }
 
 const tones = {
-  default: 'bg-surface-container-high text-on-surface',
-  positive: 'bg-tertiary-fixed text-on-tertiary-fixed',
-  negative: 'bg-error-container text-on-error-container',
+  default: 'bg-ground text-ink-control',
+  positive: 'bg-income-tint text-income',
+  negative: 'bg-expense-tint text-expense',
 }
 
 export function Chip({ children, tone = 'default' }: ChipProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-3 py-1 font-label text-[10px] font-bold uppercase tracking-[0.14em]',
+        'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold leading-4',
         tones[tone],
       )}
     >

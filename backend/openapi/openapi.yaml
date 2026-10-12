@@ -243,6 +243,7 @@ components:
         total_assets:
           type: number
           format: double
+          description: Sum of current balances of non-archived accounts. Transactions without an account and archived accounts are excluded.
           example: 50000.00
         income:
           type: number

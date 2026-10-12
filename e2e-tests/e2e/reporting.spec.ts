@@ -2,7 +2,7 @@ import { expect, test } from './fixture'
 import {
   bootstrapAuthedSession,
   createAccountOnAccountsPage,
-  createLedgerOnAccountsPage,
+  createLedgerInSettings,
   createTransactionOnTransactionsPage,
   openAccounts,
   openAnalytics,
@@ -14,7 +14,7 @@ test('reporting flow: overview and analytics reflect transactions', async ({ pag
   const { apiClient, session } = await bootstrapAuthedSession(page, testInfo)
 
   await openAccounts(page)
-  await createLedgerOnAccountsPage(page, 'E2E Reporting Ledger')
+  await createLedgerInSettings(page, 'E2E Reporting Ledger')
   await createAccountOnAccountsPage(page, {
     name: 'E2E Reporting Account',
     initialBalance: '1000',

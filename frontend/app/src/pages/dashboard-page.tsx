@@ -291,6 +291,7 @@ export function DashboardPage() {
             value={period}
             options={periods.map((item) => ({ value: item, label: t(`dashboard.periods.${item}`) }))}
             onChange={setPeriod}
+            className="md:min-w-[360px]"
           />
         </div>
 

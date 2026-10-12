@@ -17,25 +17,30 @@ export function SelectField({
   ...props
 }: SelectFieldProps) {
   const selectId = id ?? label.toLowerCase().replace(/\s+/g, '-')
+  const helperId = helperText ? `${selectId}-helper` : undefined
+  const errorId = error ? `${selectId}-error` : undefined
+  const describedBy = [props['aria-describedby'], helperId, errorId].filter(Boolean).join(' ') || undefined
 
   return (
     <div className="block space-y-2">
-      <label className="block font-label text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant" htmlFor={selectId}>
+      <label className="block text-[13px] font-semibold leading-5 text-ink-secondary" htmlFor={selectId}>
         {label}
       </label>
       <select
         id={selectId}
         className={cn(
-          'h-11 w-full rounded-lg border bg-surface-container-low px-3 text-sm text-on-surface outline-none transition focus:bg-white',
-          error ? 'border-error focus:border-error' : 'border-outline/25 focus:border-primary',
+          'h-11 w-full rounded-lg border bg-white px-3 text-sm text-ink outline-none transition focus:ring-1 disabled:cursor-not-allowed disabled:bg-ground disabled:text-ink-tertiary motion-reduce:transition-none',
+          error ? 'border-error focus:border-error focus:ring-error' : 'border-black/15 focus:border-action focus:ring-action',
           className,
         )}
         {...props}
+        aria-invalid={error ? true : props['aria-invalid']}
+        aria-describedby={describedBy}
       >
         {children}
       </select>
-      {helperText ? <p className="text-xs text-on-surface-variant">{helperText}</p> : null}
-      {error ? <p className="text-xs font-medium text-error">{error}</p> : null}
+      {helperText ? <p id={helperId} className="text-xs leading-5 text-ink-secondary">{helperText}</p> : null}
+      {error ? <p id={errorId} className="text-xs font-medium text-error">{error}</p> : null}
     </div>
   )
 }

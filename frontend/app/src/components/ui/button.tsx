@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, PropsWithChildren } from 'react'
 import { cn } from '@/lib/utils'
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost'
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'destructive' | 'destructive-ghost'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
@@ -9,11 +9,16 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    'bg-primary text-white shadow-ambient hover:bg-primary-container active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed',
+    'bg-action text-white shadow-ambient hover:bg-action-hover active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100',
   secondary:
-    'border border-outline/20 bg-surface-container-high text-primary hover:bg-surface-container-highest disabled:opacity-60 disabled:cursor-not-allowed',
+    'border border-black/10 bg-white text-action hover:bg-action-tint active:bg-action-tint-pressed disabled:cursor-not-allowed disabled:opacity-50',
   ghost:
-    'bg-transparent text-primary hover:bg-surface-container-low disabled:opacity-60 disabled:cursor-not-allowed',
+    'bg-transparent text-action hover:bg-action-tint active:bg-action-tint-pressed disabled:cursor-not-allowed disabled:opacity-50',
+  // Irreversible or data-hiding actions. Uses the error red, never the expense red (DESIGN.md).
+  destructive:
+    'bg-error text-white hover:bg-on-error-container active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100',
+  'destructive-ghost':
+    'bg-transparent text-error hover:bg-error-container active:bg-error-container disabled:cursor-not-allowed disabled:opacity-50',
 }
 
 export function Button({
@@ -27,7 +32,7 @@ export function Button({
     <button
       type={type}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0066cc] motion-reduce:transition-none',
+        'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action motion-reduce:transition-none',
         variants[variant],
         className,
       )}

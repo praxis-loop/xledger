@@ -13,7 +13,7 @@ test('transfer flow: create, edit, and delete transfer pair', async ({ page, rec
     }),
     apiClient.createAccount(accessToken, {
       name: uniqueName('E2E Transfer To'),
-      type: 'bank',
+      type: 'debit',
       initial_balance: 200,
     }),
   ])

@@ -7,6 +7,7 @@ export interface AccountItem {
   type: string
   initial_balance: number
   current_balance?: number
+  archived_at?: string | null
 }
 
 export interface LedgerItem {
@@ -57,7 +58,7 @@ export function createAccount(accessToken: string, input: { name: string; type: 
   })
 }
 
-export function updateAccount(accessToken: string, id: string, input: { name?: string; type?: string }) {
+export function updateAccount(accessToken: string, id: string, input: { name?: string; type?: string; archived?: boolean }) {
   return requestEnvelope<AccountItem>(`/accounts/${id}`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -125,6 +126,21 @@ export function deleteCategory(accessToken: string, id: string) {
 
 export function getTags(accessToken: string) {
   return requestEnvelope<PaginatedResponse<TagItem>>('/tags', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+}
+
+export function createTag(accessToken: string, input: { name: string }) {
+  return requestEnvelope<TagItem>('/tags', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(input),
+  })
+}
+
+export function deleteTag(accessToken: string, id: string) {
+  return requestEnvelope<{ deleted: boolean }>(`/tags/${id}`, {
+    method: 'DELETE',
     headers: { Authorization: `Bearer ${accessToken}` },
   })
 }

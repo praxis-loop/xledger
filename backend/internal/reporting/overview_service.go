@@ -71,6 +71,10 @@ func (s *OverviewService) GetOverview(ctx context.Context, userID string, query 
 			return OverviewResult{}, err
 		}
 		for _, a := range accounts {
+			// Archived accounts are retired: they keep their history but no longer count toward total assets.
+			if a.ArchivedAt != nil {
+				continue
+			}
 			totalAssets += a.InitialBalance + deltas[a.ID]
 		}
 	}

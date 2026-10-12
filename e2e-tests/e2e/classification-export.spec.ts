@@ -1,5 +1,5 @@
 import { expect, test } from './fixture'
-import { bootstrapAuthedSession, openAccounts, openAnalytics, uniqueName } from './helpers/ui-flows'
+import { bootstrapAuthedSession, openAnalytics, openSettings, uniqueName } from './helpers/ui-flows'
 
 test('classification flow: category/tag usage and CSV export', async ({ page, recordToReport }, testInfo) => {
   const { apiClient, session } = await bootstrapAuthedSession(page, testInfo)
@@ -49,10 +49,13 @@ test('classification flow: category/tag usage and CSV export', async ({ page, re
   expect(exportedCsv).toContain(',333,expense,')
   expect(exportedCsv).toContain(categoryName)
 
-  await openAccounts(page)
-  await page.getByPlaceholder('Search categories...').fill(categoryName)
-  await expect(page.getByText(categoryName)).toBeVisible()
-  await expect(page.getByText(tagName)).toBeVisible()
+  await openSettings(page)
+  const categorySearch = page.getByRole('searchbox', { name: 'Search categories' })
+  if (await categorySearch.count()) {
+    await categorySearch.fill(categoryName)
+  }
+  await expect(page.getByText(categoryName, { exact: true })).toBeVisible()
+  await expect(page.getByText(tagName, { exact: true })).toBeVisible()
 
   await openAnalytics(page)
   await expect(page.getByRole('heading', { name: 'Expense Structure' })).toBeVisible()
