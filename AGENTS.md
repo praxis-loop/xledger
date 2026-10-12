@@ -76,3 +76,25 @@ make setup | make backend | make frontend | make migrate-up | make clean
 
 必需：`SMTP_HOST`、`AUTH_CODE_PEPPER`
 可选：`DATABASE_URL`（留空则使用内存模式）、`REDIS_URL`
+
+## 发布
+
+按 skill `service-release` 执行，本节只写本服务的约定：
+
+- 线上分支 `prd`，只经 PR 合入；`main` 暂时保留但不再作为发布来源。
+- 批次分支 `feat/<主题>` 从最新 `prd` 拉；hotfix 从当前线上 tag 拉 `hotfix/<问题简称>`。
+- tag 格式 `prd-vX.Y.Z/YYYY.MM.DD(.N)`，附注 tag，只打在 `prd` 上；版本号由人在定版时判断。
+- 每个改动在同一个提交里更新 `CHANGELOG.md` 的 `[Unreleased]`；涉及环境变量、配置、数据库迁移的写进「发布清单」。
+- **本服务没有 test 环境**：提测 = 本地验证（`go test ./...`、前端 `pnpm run check` 与 `pnpm run build`、本地起前后端跑关键流程），结论写进 PR 描述。
+- 数据库迁移在后端连上 Postgres 启动时自动执行，迁移文件只追加不修改；每个迁移在发布清单里写明回滚方式。
+- prd 只部署 tag，部署记录写 `DEPLOYMENTS.md`，提交 `docs(deploy): <tag>` 直接推 `prd`。机器、部署目录、备份位置见 `praxis-loop/servers` 的 `SERVICES.md`，不写进本仓库。
+
+## 部署后验证
+
+除 skill 的通用项（容器重启次数为 0、健康检查通过、日志没有新错误）外，逐项执行：
+
+1. 对外入口 `https://xledger.xanne.cloud` 返回 200。
+2. 前端容器本地端口返回 200；后端 `GET /api/auth/me` 未登录返回 401（说明后端在跑、认证中间件生效）。
+3. 后端启动日志里迁移全部成功，`schema_migrations` 里有本版新增的迁移文件名。
+4. 用测试账号登录，依次打开首页、交易、账户、设置，确认数据加载正常、没有报错提示。
+5. 记一笔支出并删除，确认交易列表和首页总额随之变化后恢复。
