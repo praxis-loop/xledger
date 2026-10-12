@@ -59,9 +59,18 @@ sudo docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yaml up 
 
 ## Production
 
-Use `docker-compose.prd.yaml` with `backend/config/production.yaml` when deploying
-a production environment:
+Production runs `docker-compose.prd.yaml` with `backend/config/production.yaml`
+(start from `backend/config/config.prd.yaml`; the real file is git-ignored and must
+keep `enable_dev_login: false`). Releases follow the service-release flow in
+`AGENTS.md`; deploy the release tag only:
 
 ```bash
+git fetch --tags origin && git merge --ff-only <prd tag>
 sudo docker compose -f deploy/docker-compose.prd.yaml up -d --build
 ```
+
+The backend reaches Google OAuth and SMTP through the host proxy configured in the
+compose file (`XLEDGER_*_PROXY` overrides it). When the server is short on disk, reuse
+base images that are already cached instead of pulling the defaults, e.g.
+`sudo env GOLANG_IMAGE=docker.m.daocloud.io/library/golang:1.26-alpine NODE_IMAGE=node:22-alpine docker compose ...`,
+and run `sudo docker builder prune -f` afterwards.

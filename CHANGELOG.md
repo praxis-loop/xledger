@@ -10,16 +10,22 @@
 
 ### 发布清单
 - 环境变量：无
-- 配置文件：无
+- 配置文件：线上新增 `backend/config/production.yaml`：从现有线上配置 `backend/config/test.yaml` 原样复制（权限 600，内容不变，原文件保留用于回滚）；编排文件改用 `deploy/docker-compose.prd.yaml`
 - 数据库迁移：无
-- 需重建：前端、后端
-- 依赖与部署顺序：无
+- 需重建：前端、后端、redis（redis 改由本目录的 prd 编排接管，沿用数据卷 `xledger_redis_data`，重建时会短暂断开）
+- 依赖与部署顺序：先建 `production.yaml`，再执行 `docker compose -f deploy/docker-compose.prd.yaml up -d --build`（不再需要 `--no-deps`）；确认后可删除旧的 redis 部署目录
+
+### Changed
+- 生产部署改用 `deploy/docker-compose.prd.yaml`，并补上后端出站代理（不补的话 Google 登录不通）
 
 ### Fixed
 - 有夏令时的时区（如美国、欧洲）切换夏令时之后，统计页按天的收支丢失、显示为 0：后端按天分组改为按日历日推进，不再按 24 小时
 - 统计按天 / 按月分组的起止时间被误当作本地时间解读，查一个月会多出前一天或后一天的空分组
 - 统计页与首页把按天 / 按月的数据归到哪一天时依赖浏览器时区换算，在 UTC 以西的时区可能落到前一天或前一个月；改为直接读取分组的日历日期
 - 账本、分类、标签名称超过 40 个字会被静默截断：上限改为 60 个字，和账户名称一致
+
+### Security
+- 生产配置模板 `config.prd.yaml` 默认关闭开发登录（`enable_dev_login: false`）
 
 ## [prd-v1.0.0/2026.10.12] - 2026-10-12
 

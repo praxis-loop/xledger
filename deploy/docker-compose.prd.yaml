@@ -29,6 +29,18 @@ services:
     volumes:
       - ${BACKEND_CONFIG_FILE:-../backend/config/production.yaml}:/app/config/source-config.yaml:ro
       - ./backend-entrypoint.sh:/app/backend-entrypoint.sh:ro
+    # Outbound calls (Google OAuth, SMTP) leave through the host's proxy; the server cannot reach Google directly.
+    environment:
+      HTTP_PROXY: ${XLEDGER_HTTP_PROXY:-http://host.docker.internal:10829}
+      HTTPS_PROXY: ${XLEDGER_HTTPS_PROXY:-http://host.docker.internal:10829}
+      ALL_PROXY: ${XLEDGER_ALL_PROXY:-socks5h://host.docker.internal:10828}
+      NO_PROXY: ${XLEDGER_NO_PROXY:-localhost,127.0.0.1,::1,redis,xledger-backend,xledger-frontend,shared-postgres}
+      http_proxy: ${XLEDGER_HTTP_PROXY:-http://host.docker.internal:10829}
+      https_proxy: ${XLEDGER_HTTPS_PROXY:-http://host.docker.internal:10829}
+      all_proxy: ${XLEDGER_ALL_PROXY:-socks5h://host.docker.internal:10828}
+      no_proxy: ${XLEDGER_NO_PROXY:-localhost,127.0.0.1,::1,redis,xledger-backend,xledger-frontend,shared-postgres}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "${XLEDGER_BACKEND_PORT:-8080}:8080"
     healthcheck:
