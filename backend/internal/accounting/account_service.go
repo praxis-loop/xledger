@@ -6,6 +6,20 @@ import (
 	"time"
 )
 
+// Account types follow the OpenAPI contract. Legacy rows may still carry other values;
+// they stay readable and renameable, but new writes must use one of these.
+var validAccountTypes = map[string]struct{}{
+	"debit":   {},
+	"credit":  {},
+	"cash":    {},
+	"ewallet": {},
+}
+
+func isValidAccountType(accountType string) bool {
+	_, ok := validAccountTypes[accountType]
+	return ok
+}
+
 type AccountService struct {
 	repo AccountRepository
 }
@@ -18,7 +32,7 @@ func (s *AccountService) CreateAccount(_ context.Context, userID string, input A
 	normalizedUserID := strings.TrimSpace(userID)
 	normalizedName := strings.TrimSpace(input.Name)
 	normalizedType := strings.TrimSpace(input.Type)
-	if normalizedUserID == "" || normalizedName == "" || normalizedType == "" {
+	if normalizedUserID == "" || normalizedName == "" || !isValidAccountType(normalizedType) {
 		return Account{}, &contractError{code: ACCOUNT_INVALID}
 	}
 	input.Name = normalizedName
@@ -61,7 +75,7 @@ func (s *AccountService) UpdateAccount(_ context.Context, userID string, account
 	if input.HasName && strings.TrimSpace(input.Name) == "" {
 		return Account{}, &contractError{code: ACCOUNT_INVALID}
 	}
-	if input.HasType && strings.TrimSpace(input.Type) == "" {
+	if input.HasType && !isValidAccountType(strings.TrimSpace(input.Type)) {
 		return Account{}, &contractError{code: ACCOUNT_INVALID}
 	}
 	if input.HasName {

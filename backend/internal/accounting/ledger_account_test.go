@@ -47,7 +47,7 @@ func TestAccountCRUD_OwnershipScopedByUser(t *testing.T) {
 
 	created, err := service.CreateAccount(context.Background(), "owner-user", AccountCreateInput{
 		Name:           "Cash",
-		Type:           "asset",
+		Type:           "cash",
 		InitialBalance: 10,
 	})
 	if err != nil {
@@ -187,5 +187,53 @@ func TestListAccounts_IncludesCurrentBalance(t *testing.T) {
 	}
 	if body.Data.Items[0].CurrentBalance != 875 {
 		t.Fatalf("expected current balance 875, got %v", body.Data.Items[0].CurrentBalance)
+	}
+}
+
+func TestAccountType_RestrictedToContractValues(t *testing.T) {
+	service := NewAccountService(NewInMemoryAccountRepository())
+	ctx := context.Background()
+
+	for _, accountType := range []string{"debit", "credit", "cash", "ewallet", " ewallet "} {
+		created, err := service.CreateAccount(ctx, "user-1", AccountCreateInput{Name: "Account " + accountType, Type: accountType})
+		if err != nil {
+			t.Fatalf("create %q: unexpected error %v", accountType, err)
+		}
+		if created.Type != strings.TrimSpace(accountType) {
+			t.Fatalf("expected normalized type %q, got %q", strings.TrimSpace(accountType), created.Type)
+		}
+	}
+
+	for _, accountType := range []string{"bank", "investment", "Debit"} {
+		_, err := service.CreateAccount(ctx, "user-1", AccountCreateInput{Name: "Invalid " + accountType, Type: accountType})
+		if ErrorCode(err) != ACCOUNT_INVALID {
+			t.Fatalf("create %q: expected %s, got %q", accountType, ACCOUNT_INVALID, ErrorCode(err))
+		}
+	}
+
+	account, err := service.CreateAccount(ctx, "user-1", AccountCreateInput{Name: "Wallet", Type: "cash"})
+	if err != nil {
+		t.Fatalf("seed account: %v", err)
+	}
+	if _, err := service.UpdateAccount(ctx, "user-1", account.ID, AccountUpdateInput{HasType: true, Type: "bank"}); ErrorCode(err) != ACCOUNT_INVALID {
+		t.Fatalf("update to bank: expected %s, got %q", ACCOUNT_INVALID, ErrorCode(err))
+	}
+}
+
+func TestAccountUpdate_KeepsLegacyTypeWhenTypeOmitted(t *testing.T) {
+	repo := NewInMemoryAccountRepository()
+	service := NewAccountService(repo)
+	ctx := context.Background()
+
+	legacy, err := repo.Create("user-1", AccountCreateInput{Name: "Old", Type: "investment"})
+	if err != nil {
+		t.Fatalf("seed legacy account: %v", err)
+	}
+	updated, err := service.UpdateAccount(ctx, "user-1", legacy.ID, AccountUpdateInput{HasName: true, Name: "Renamed"})
+	if err != nil {
+		t.Fatalf("rename legacy account: %v", err)
+	}
+	if updated.Type != "investment" || updated.Name != "Renamed" {
+		t.Fatalf("expected rename to keep legacy type, got %#v", updated)
 	}
 }
