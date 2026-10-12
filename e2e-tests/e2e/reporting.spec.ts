@@ -42,7 +42,8 @@ test('reporting flow: overview and analytics reflect transactions', async ({ pag
     to: to.toISOString(),
   })
 
-  expect(overview.total_assets).toBeCloseTo(1000, 2)
+  // Both transactions are booked to the account (the helper selects it), so they move the balance: 1000 - 120 + 2500.
+  expect(overview.total_assets).toBeCloseTo(3380, 2)
   expect(overview.income).toBeCloseTo(2500, 2)
   expect(overview.expense).toBeCloseTo(120, 2)
   expect(overview.net).toBeCloseTo(2380, 2)
