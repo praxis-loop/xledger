@@ -45,6 +45,7 @@ export interface AccountRecord {
   name: string
   type: string
   initial_balance: number
+  archived_at?: string | null
 }
 
 export interface LedgerRecord {

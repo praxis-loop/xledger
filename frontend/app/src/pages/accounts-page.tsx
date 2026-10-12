@@ -1,45 +1,26 @@
-import { Search } from 'lucide-react'
+import { Banknote, ChevronRight, CircleAlert, CircleDollarSign, CreditCard, Landmark, Pencil, Plus, Wallet, type LucideIcon } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { DialogShell } from '@/components/ui/dialog-shell'
-import { PageSection } from '@/components/ui/page-section'
 import { SelectField } from '@/components/ui/select-field'
 import { TextField } from '@/components/ui/text-field'
+import { ACCOUNT_TYPES, getAccountTypeLabelKey, isKnownAccountType, type AccountType } from '@/features/management/account-types'
 import type { AccountItem } from '@/features/management/management-api'
-import {
-  useCreateAccount,
-  useCreateCategory,
-  useCreateLedger,
-  useDeleteCategory,
-  useDeleteLedger,
-  useManagementOverview,
-  useUpdateAccount,
-  useUpdateCategory,
-  useUpdateLedger,
-} from '@/features/management/management-hooks'
+import { useCreateAccount, useManagementOverview, useUpdateAccount } from '@/features/management/management-hooks'
+import { getFriendlyApiErrorMessage } from '@/lib/api'
 import { formatCurrency } from '@/lib/format'
 
-const CATEGORY_PRIORITY = [
-  'Lunch',
-  'Dinner',
-  'Breakfast',
-  'Coffee',
-  'Groceries',
-  'Transport',
-  'Rent',
-  'Utilities',
-  'Salary',
-  'Bonus',
-  'Investment',
-  'Travel',
-]
-
-function getCategoryPriority(name: string) {
-  const index = CATEGORY_PRIORITY.findIndex((item) => item.toLowerCase() === name.toLowerCase())
-  return index === -1 ? CATEGORY_PRIORITY.length : index
+const ACCOUNT_TYPE_ICONS: Record<AccountType, LucideIcon> = {
+  debit: Landmark,
+  credit: CreditCard,
+  cash: Banknote,
+  ewallet: Wallet,
 }
+
+const FOCUS_RING_CLASS = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action'
 
 function getCurrentBalance(account: AccountItem) {
   return typeof account.current_balance === 'number' && Number.isFinite(account.current_balance)
@@ -47,445 +28,413 @@ function getCurrentBalance(account: AccountItem) {
     : account.initial_balance
 }
 
+// Accepts "1,280.50", "¥1280.5", "-20" and blank (= 0). Returns null for anything else.
+function parseAmountInput(value: string) {
+  const normalized = value.replace(/[,\s¥]/g, '')
+  if (normalized === '') return 0
+  if (!/^-?\d+(\.\d{1,2})?$/.test(normalized)) return null
+  return Number(normalized)
+}
+
+type AccountDialogState = { mode: 'create' } | { mode: 'edit'; account: AccountItem }
+
 export function AccountsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const [showDialog, setShowDialog] = useState(false)
-  const [editingAccountID, setEditingAccountID] = useState<string | null>(null)
-  const [name, setName] = useState('')
-  const [type, setType] = useState('cash')
-  const [initialBalance, setInitialBalance] = useState('0')
-  const [editName, setEditName] = useState('')
-  const [editType, setEditType] = useState('cash')
-  const [showLedgerDialog, setShowLedgerDialog] = useState(false)
-  const [ledgerName, setLedgerName] = useState('')
-  const [editingLedgerID, setEditingLedgerID] = useState<string | null>(null)
-  const [editingLedgerName, setEditingLedgerName] = useState('')
-  const [categoryQuery, setCategoryQuery] = useState('')
-  const [tagQuery, setTagQuery] = useState('')
-  const [showAllCategories, setShowAllCategories] = useState(false)
-  const [showAllTags, setShowAllTags] = useState(false)
-  const [showCategoryForm, setShowCategoryForm] = useState(false)
-  const [categoryName, setCategoryName] = useState('')
-  const [editingCategoryID, setEditingCategoryID] = useState<string | null>(null)
-  const [editingCategoryName, setEditingCategoryName] = useState('')
+  const [dialog, setDialog] = useState<AccountDialogState | null>(null)
+  const [restoreError, setRestoreError] = useState<string | null>(null)
 
-  const { accountsQuery, ledgersQuery, categoriesQuery, tagsQuery } = useManagementOverview()
-  const createAccountMutation = useCreateAccount()
+  const { accountsQuery } = useManagementOverview({ includeCategories: false, includeTags: false })
   const updateAccountMutation = useUpdateAccount()
-  const createLedgerMutation = useCreateLedger()
-  const updateLedgerMutation = useUpdateLedger()
-  const deleteLedgerMutation = useDeleteLedger()
-  const createCategoryMutation = useCreateCategory()
-  const updateCategoryMutation = useUpdateCategory()
-  const deleteCategoryMutation = useDeleteCategory()
 
-  const accounts = accountsQuery.data?.items ?? []
-  const ledgers = ledgersQuery.data?.items ?? []
-  const categories = useMemo(
-    () => (categoriesQuery.data?.items ?? []).filter((category) => !category.archived_at),
-    [categoriesQuery.data?.items],
-  )
-  const tags = tagsQuery.data?.items ?? []
-  const normalizedCategoryQuery = categoryQuery.trim().toLowerCase()
-  const normalizedTagQuery = tagQuery.trim().toLowerCase()
+  const { activeAccounts, archivedAccounts, assets, liabilities } = useMemo(() => {
+    const items = accountsQuery.data?.items ?? []
+    const active = items.filter((account) => !account.archived_at)
+    const archived = items.filter((account) => Boolean(account.archived_at))
+    let positive = 0
+    let negative = 0
+    for (const account of active) {
+      const balance = getCurrentBalance(account)
+      if (balance >= 0) positive += balance
+      else negative += balance
+    }
+    return { activeAccounts: active, archivedAccounts: archived, assets: positive, liabilities: Math.abs(negative) }
+  }, [accountsQuery.data?.items])
 
-  const sortedCategories = useMemo(
-    () => [...categories].sort((a, b) => getCategoryPriority(a.name) - getCategoryPriority(b.name) || a.name.localeCompare(b.name)),
-    [categories],
-  )
+  const hasData = accountsQuery.isSuccess
+  const isEmpty = hasData && activeAccounts.length === 0 && archivedAccounts.length === 0
 
-  const filteredCategories = useMemo(() => {
-    if (!normalizedCategoryQuery) return sortedCategories
-    return sortedCategories.filter((category) => category.name.toLowerCase().includes(normalizedCategoryQuery))
-  }, [normalizedCategoryQuery, sortedCategories])
-
-  const filteredTags = useMemo(() => {
-    if (!normalizedTagQuery) return tags
-    return tags.filter((tag) => tag.name.toLowerCase().includes(normalizedTagQuery))
-  }, [normalizedTagQuery, tags])
-
-  const categoryPreviewCount = 8
-  const tagPreviewCount = 14
-  const visibleCategories = showAllCategories ? filteredCategories : filteredCategories.slice(0, categoryPreviewCount)
-  const visibleTags = showAllTags ? filteredTags : filteredTags.slice(0, tagPreviewCount)
-
-  const totals = useMemo(
-    () => accounts.reduce((acc, account) => acc + getCurrentBalance(account), 0),
-    [accounts],
-  )
-
-  async function handleCreateAccount(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    await createAccountMutation.mutateAsync({ name, type, initial_balance: Number(initialBalance) })
-    setShowDialog(false)
-    setName('')
-    setType('cash')
-    setInitialBalance('0')
-  }
-
-  async function handleUpdateAccount(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!editingAccountID) return
-    await updateAccountMutation.mutateAsync({ id: editingAccountID, name: editName, type: editType })
-    setEditingAccountID(null)
-  }
-
-  async function handleCreateLedger(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    await createLedgerMutation.mutateAsync({ name: ledgerName, is_default: false })
-    setShowLedgerDialog(false)
-    setLedgerName('')
-  }
-
-  async function handleUpdateLedger(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!editingLedgerID) return
-    await updateLedgerMutation.mutateAsync({ id: editingLedgerID, name: editingLedgerName })
-    setEditingLedgerID(null)
-    setEditingLedgerName('')
-  }
-
-  async function handleCreateCategory(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const trimmedName = categoryName.trim()
-    if (!trimmedName) return
-    await createCategoryMutation.mutateAsync({ name: trimmedName })
-    setCategoryName('')
-    setShowCategoryForm(false)
-    setCategoryQuery('')
-    setShowAllCategories(true)
-  }
-
-  async function handleUpdateCategory(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!editingCategoryID) return
-    const trimmedName = editingCategoryName.trim()
-    if (!trimmedName) return
-    await updateCategoryMutation.mutateAsync({ id: editingCategoryID, name: trimmedName })
-    setEditingCategoryID(null)
-    setEditingCategoryName('')
+  async function handleRestore(account: AccountItem) {
+    setRestoreError(null)
+    try {
+      await updateAccountMutation.mutateAsync({ id: account.id, archived: false })
+    } catch (error) {
+      setRestoreError(t('accountsPage.restoreFailed', { message: getFriendlyApiErrorMessage(error, t) }))
+    }
   }
 
   return (
-    <div className="space-y-6">
-      <PageSection
-        eyebrow={t('accountsPage.eyebrow')}
-        title={t('accountsPage.title')}
-        description={t('accountsPage.description')}
-        actions={<Button onClick={() => setShowDialog(true)}>{t('accountsPage.newAccount')}</Button>}
-      >
-        <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-          <article className="rounded-2xl border border-outline/10 bg-surface-container-low p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="font-label text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">
-                {t('accountsPage.accounts')}
+    <div className="space-y-5">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-headline text-[34px] font-bold leading-tight tracking-normal text-ink md:text-[44px] md:font-extrabold">
+            {t('accountsPage.title')}
+          </h1>
+          <p className="mt-1.5 max-w-2xl text-[15px] leading-6 text-ink-secondary md:text-sm">{t('accountsPage.description')}</p>
+        </div>
+        {!isEmpty ? (
+          <Button className="min-h-11 w-full sm:w-auto" onClick={() => setDialog({ mode: 'create' })}>
+            <Plus aria-hidden="true" className="h-4 w-4" />
+            {t('accountsPage.newAccount')}
+          </Button>
+        ) : null}
+      </header>
+
+      {accountsQuery.isPending ? <AccountsSkeleton label={t('accountsPage.loading')} /> : null}
+
+      {accountsQuery.isError && !hasData ? (
+        <section role="alert" className="rounded-lg border border-black/10 bg-white p-5">
+          <div className="flex items-start gap-3">
+            <CircleAlert aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-error" />
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold text-ink">{t('accountsPage.loadFailed')}</h2>
+              <p className="mt-1 text-sm leading-6 text-ink-secondary">
+                {t('accountsPage.loadFailedHint', { message: getFriendlyApiErrorMessage(accountsQuery.error, t) })}
               </p>
-              <div className="rounded-xl border border-outline/10 bg-white px-3 py-2 text-right">
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-on-surface-variant">
-                  {t('accountsPage.totalBalance')}
-                </p>
-                <p className="font-headline text-3xl font-extrabold text-on-surface">{formatCurrency(totals)}</p>
-              </div>
+              <Button variant="secondary" className="mt-3 min-h-11" onClick={() => void accountsQuery.refetch()} disabled={accountsQuery.isFetching}>
+                {t('common.retry')}
+              </Button>
             </div>
-            <div className="mt-4 grid gap-3">
-              {accounts.map((account) => (
-                <div key={account.id} className="rounded-xl border border-outline/10 bg-white p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="font-semibold text-on-surface">{account.name}</p>
-                      <p className="mt-1 text-xs uppercase tracking-[0.12em] text-on-surface-variant">{account.type}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-headline text-2xl font-extrabold text-on-surface">{formatCurrency(getCurrentBalance(account))}</p>
-                      <p className="mt-1 text-xs text-on-surface-variant">
-                        {t('accountsPage.openingBalance', { amount: formatCurrency(account.initial_balance) })}
+          </div>
+        </section>
+      ) : null}
+
+      {isEmpty ? (
+        <section className="rounded-lg border border-black/10 bg-white px-5 py-10 text-center">
+          <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-action-tint text-action">
+            <Wallet aria-hidden="true" className="h-6 w-6" />
+          </span>
+          <h2 className="mt-4 text-lg font-semibold text-ink">{t('accountsPage.empty.title')}</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-ink-secondary">{t('accountsPage.empty.body')}</p>
+          <div className="mt-5 flex flex-col items-stretch justify-center gap-2 sm:flex-row sm:items-center">
+            <Button className="min-h-11" onClick={() => setDialog({ mode: 'create' })}>
+              {t('accountsPage.empty.createFirstAccount')}
+            </Button>
+            <Button variant="secondary" className="min-h-11" onClick={() => navigate('/transactions')}>
+              {t('accountsPage.empty.goToTransactions')}
+            </Button>
+          </div>
+        </section>
+      ) : null}
+
+      {hasData && !isEmpty ? (
+        <div className="grid items-start gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <section aria-labelledby="total-assets-label" className="rounded-lg bg-action p-4 text-white md:p-5 lg:sticky lg:top-24">
+            <p id="total-assets-label" className="text-[13px] font-semibold">
+              {t('accountsPage.totalAssets')}
+            </p>
+            <p className="mt-2 break-words font-headline text-[34px] font-bold leading-none tabular-nums md:text-[40px]">
+              {formatCurrency(assets - liabilities)}
+            </p>
+            <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-white/25 pt-3">
+              <div className="min-w-0">
+                <dt className="text-xs font-medium">{t('accountsPage.assets')}</dt>
+                <dd className="mt-0.5 truncate text-base font-semibold tabular-nums">{formatCurrency(assets)}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-xs font-medium">{t('accountsPage.liabilities')}</dt>
+                <dd className="mt-0.5 truncate text-base font-semibold tabular-nums">{formatCurrency(liabilities)}</dd>
+              </div>
+            </dl>
+            <p className="mt-3 text-xs leading-5">{t('accountsPage.totalHint')}</p>
+          </section>
+
+          <div className="min-w-0 space-y-5">
+            <section aria-labelledby="active-accounts-heading">
+              <h2 id="active-accounts-heading" className="mb-2 px-1 text-[13px] font-semibold text-ink-secondary">
+                {t('accountsPage.activeAccounts', { count: activeAccounts.length })}
+              </h2>
+              {activeAccounts.length > 0 ? (
+                <ul className="divide-y divide-black/10 overflow-hidden rounded-lg border border-black/10 bg-white">
+                  {activeAccounts.map((account) => (
+                    <AccountRow key={account.id} account={account} onEdit={() => setDialog({ mode: 'edit', account })} />
+                  ))}
+                </ul>
+              ) : (
+                <p className="rounded-lg border border-black/10 bg-white px-4 py-4 text-sm text-ink-secondary">
+                  {t('accountsPage.noActiveAccounts')}
+                </p>
+              )}
+            </section>
+
+            {archivedAccounts.length > 0 ? (
+              <details className="group rounded-lg border border-black/10 bg-white">
+                <summary
+                  className={`flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-2.5 text-[13px] font-semibold text-ink-secondary hover:bg-ground [&::-webkit-details-marker]:hidden ${FOCUS_RING_CLASS}`}
+                >
+                  {t('accountsPage.archivedAccounts', { count: archivedAccounts.length })}
+                  <ChevronRight aria-hidden="true" className="h-4 w-4 transition-transform group-open:rotate-90 motion-reduce:transition-none" />
+                </summary>
+                <p className="border-t border-black/10 px-4 py-2 text-xs leading-5 text-ink-tertiary">{t('accountsPage.archivedHint')}</p>
+                {restoreError ? (
+                  <p role="alert" className="mx-4 mb-2 rounded-lg bg-error-container px-3 py-2 text-sm text-on-error-container">
+                    {restoreError}
+                  </p>
+                ) : null}
+                <ul className="divide-y divide-black/10 border-t border-black/10">
+                  {archivedAccounts.map((account) => (
+                    <li key={account.id} className="flex items-center gap-3 py-2 pl-4 pr-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[15px] font-medium text-ink-secondary">{account.name}</p>
+                        <p className="truncate text-xs text-ink-tertiary">{t(getAccountTypeLabelKey(account.type))}</p>
+                      </div>
+                      <p className="shrink-0 text-[15px] font-semibold tabular-nums text-ink-tertiary">
+                        {formatCurrency(getCurrentBalance(account))}
                       </p>
                       <Button
                         variant="ghost"
-                        className="mt-2 px-0 py-0 text-xs"
-                        onClick={() => {
-                          setEditingAccountID(account.id)
-                          setEditName(account.name)
-                          setEditType(account.type)
-                        }}
+                        className="min-h-11 shrink-0 px-3"
+                        aria-label={t('accountsPage.restoreAccountLabel', { name: account.name })}
+                        disabled={updateAccountMutation.isPending}
+                        onClick={() => void handleRestore(account)}
                       >
-                        {t('accountsPage.editAccount')}
+                        {t('accountsPage.restoreAccount')}
                       </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {accounts.length === 0 ? (
-                <div className="rounded-xl border border-outline/10 bg-white p-4 text-sm text-on-surface-variant">
-                  <p>{t('accountsPage.noAccounts')}</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Button className="px-3 py-1.5 text-xs" onClick={() => setShowDialog(true)}>{t('accountsPage.createFirstAccount')}</Button>
-                    <Button className="px-3 py-1.5 text-xs" variant="secondary" onClick={() => navigate('/transactions')}>
-                      {t('accountsPage.goToTransactions')}
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </article>
-
-          <div className="grid gap-4">
-            <article className="rounded-2xl border border-outline/10 bg-surface-container-low p-5">
-              <div className="flex items-center justify-between gap-3">
-                <p className="font-label text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">
-                  {t('accountsPage.ledgers')}
-                </p>
-                <Button variant="secondary" onClick={() => setShowLedgerDialog(true)}>{t('accountsPage.newLedger')}</Button>
-              </div>
-              <div className="mt-4 space-y-2.5">
-                {ledgers.map((ledger) => (
-                  <div key={ledger.id} className="flex items-center justify-between rounded-xl border border-outline/10 bg-white px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-on-surface">{ledger.name}</span>
-                      {ledger.is_default ? <span className="rounded-full bg-surface-container-low px-2 py-0.5 text-xs text-on-surface-variant">{t('common.default')}</span> : null}
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Button
-                        variant="ghost"
-                        className="px-2 py-1 text-xs"
-                        onClick={() => {
-                          setEditingLedgerID(ledger.id)
-                          setEditingLedgerName(ledger.name)
-                        }}
-                      >
-                        {t('common.edit')}
-                      </Button>
-                      <Button variant="ghost" className="px-2 py-1 text-xs" disabled={ledger.is_default} onClick={() => void deleteLedgerMutation.mutateAsync(ledger.id)}>
-                        {t('common.delete')}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                {ledgers.length === 0 ? (
-                  <div className="rounded-xl border border-outline/10 bg-white p-4 text-sm text-on-surface-variant">
-                    {t('accountsPage.noLedgers')}
-                  </div>
-                ) : null}
-              </div>
-            </article>
-
-            <article className="rounded-2xl border border-outline/10 bg-surface-container-low p-5">
-              <div className="flex items-center justify-between gap-3">
-                <p className="font-label text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">
-                  {t('accountsPage.categories', { count: filteredCategories.length })}
-                </p>
-                <div className="flex items-center gap-1.5">
-                  <Button className="px-3 py-2 text-xs" variant="secondary" onClick={() => setShowCategoryForm((current) => !current)}>
-                    {t('accountsPage.newCategory')}
-                  </Button>
-                  {filteredCategories.length > categoryPreviewCount ? (
-                    <Button className="px-3 py-2 text-xs" variant="ghost" onClick={() => setShowAllCategories((current) => !current)}>
-                      {showAllCategories ? t('accountsPage.showLess') : t('accountsPage.showAll')}
-                    </Button>
-                  ) : null}
-                </div>
-              </div>
-              <p className="mt-2 text-xs leading-relaxed text-on-surface-variant">{t('accountsPage.categoryHelper')}</p>
-              {showCategoryForm ? (
-                <form className="mt-3 flex flex-wrap items-end gap-2 rounded-xl border border-outline/10 bg-white p-3" onSubmit={(event) => void handleCreateCategory(event)}>
-                  <div className="min-w-0 flex-1">
-                    <label className="text-xs font-medium text-on-surface-variant" htmlFor="new-category-name">
-                      {t('accountsPage.categoryName')}
-                    </label>
-                    <input
-                      id="new-category-name"
-                      value={categoryName}
-                      onChange={(event) => setCategoryName(event.target.value)}
-                      className="mt-1 h-10 w-full rounded-xl border border-outline/20 bg-white px-3 text-sm text-on-surface"
-                    />
-                  </div>
-                  <Button type="submit" className="px-3 py-2 text-xs" disabled={createCategoryMutation.isPending || categoryName.trim() === ''}>
-                    {t('accountsPage.saveCategory')}
-                  </Button>
-                </form>
-              ) : null}
-              <div className="mt-3">
-                <label className="relative block">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
-                  <input
-                    value={categoryQuery}
-                    onChange={(event) => setCategoryQuery(event.target.value)}
-                    placeholder={t('accountsPage.searchCategories')}
-                    className="h-10 w-full rounded-xl border border-outline/20 bg-white pl-9 pr-3 text-sm text-on-surface placeholder:text-on-surface-variant/70"
-                  />
-                </label>
-              </div>
-              <div className="mt-4 flex max-h-44 flex-wrap gap-2 overflow-auto pr-1">
-                {visibleCategories.map((category) => (
-                  <div key={category.id} className="flex max-w-full flex-wrap items-center gap-2 rounded-xl border border-outline/10 bg-white px-3 py-2 text-sm text-on-surface">
-                    {editingCategoryID === category.id ? (
-                      <form className="flex max-w-full flex-wrap items-center gap-2" onSubmit={(event) => void handleUpdateCategory(event)}>
-                        <label className="sr-only" htmlFor={`category-${category.id}`}>
-                          {t('accountsPage.categoryName')}
-                        </label>
-                        <input
-                          id={`category-${category.id}`}
-                          value={editingCategoryName}
-                          onChange={(event) => setEditingCategoryName(event.target.value)}
-                          className="h-10 w-36 max-w-full rounded-lg border border-outline/20 px-2 text-xs"
-                        />
-                        <Button type="submit" className="px-3 py-2 text-xs" disabled={updateCategoryMutation.isPending || editingCategoryName.trim() === ''}>
-                          {t('accountsPage.saveCategory')}
-                        </Button>
-                      </form>
-                    ) : (
-                      <>
-                        <span className="min-w-0 break-words">{category.name}</span>
-                        <button
-                          type="button"
-                          className="min-h-9 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-primary hover:bg-primary-fixed"
-                          aria-label={t('accountsPage.renameCategoryLabel', { name: category.name })}
-                          onClick={() => {
-                            setEditingCategoryID(category.id)
-                            setEditingCategoryName(category.name)
-                          }}
-                        >
-                          {t('common.edit')}
-                        </button>
-                        <button
-                          type="button"
-                          className="min-h-9 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-rose-700 hover:bg-rose-50"
-                          aria-label={t('accountsPage.archiveCategoryLabel', { name: category.name })}
-                          onClick={() => void deleteCategoryMutation.mutateAsync(category.id)}
-                          disabled={deleteCategoryMutation.isPending}
-                        >
-                          {t('accountsPage.archiveCategory')}
-                        </button>
-                      </>
-                    )}
-                  </div>
-                ))}
-                {visibleCategories.length === 0 ? (
-                  <p className="text-sm text-on-surface-variant">{t('accountsPage.noCategories')}</p>
-                ) : null}
-              </div>
-            </article>
-
-            <article className="rounded-2xl border border-outline/10 bg-surface-container-low p-5">
-              <div className="flex items-center justify-between gap-3">
-                <p className="font-label text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">
-                  {t('accountsPage.tags', { count: filteredTags.length })}
-                </p>
-                {filteredTags.length > tagPreviewCount ? (
-                  <Button className="px-2.5 py-1 text-xs" variant="ghost" onClick={() => setShowAllTags((current) => !current)}>
-                    {showAllTags ? t('accountsPage.showLess') : t('accountsPage.showAll')}
-                  </Button>
-                ) : null}
-              </div>
-              <div className="mt-3">
-                <label className="relative block">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
-                  <input
-                    value={tagQuery}
-                    onChange={(event) => setTagQuery(event.target.value)}
-                    placeholder={t('accountsPage.searchTags')}
-                    className="h-10 w-full rounded-xl border border-outline/20 bg-white pl-9 pr-3 text-sm text-on-surface placeholder:text-on-surface-variant/70"
-                  />
-                </label>
-              </div>
-              <div className="mt-4 flex max-h-40 flex-wrap gap-2 overflow-auto pr-1">
-                {visibleTags.map((tag) => (
-                  <span key={tag.id} className="rounded-full border border-outline/10 bg-white px-3 py-1.5 text-sm text-on-surface">
-                    {tag.name}
-                  </span>
-                ))}
-                {visibleTags.length === 0 ? (
-                  <p className="text-sm text-on-surface-variant">{t('accountsPage.noTags')}</p>
-                ) : null}
-              </div>
-            </article>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
           </div>
         </div>
-      </PageSection>
-
-      {showDialog ? (
-        <DialogShell
-          title={t('accountsPage.dialogs.createAccountTitle')}
-          description={t('accountsPage.dialogs.createAccountDescription')}
-          onClose={() => setShowDialog(false)}
-          footer={
-            <>
-              <Button variant="ghost" onClick={() => setShowDialog(false)}>{t('common.cancel')}</Button>
-              <Button type="submit" form="create-account-form">{t('account.create')}</Button>
-            </>
-          }
-        >
-          <form id="create-account-form" className="grid gap-5 md:grid-cols-2" onSubmit={(event) => void handleCreateAccount(event)}>
-            <TextField label={t('accountsPage.dialogs.accountName')} value={name} onChange={(event) => setName(event.target.value)} />
-            <SelectField label={t('accountsPage.dialogs.accountType')} value={type} onChange={(event) => setType(event.target.value)}>
-              <option value="cash">{t('accountTypes.cash')}</option>
-              <option value="bank">{t('accountTypes.bank')}</option>
-              <option value="credit">{t('accountTypes.credit')}</option>
-            </SelectField>
-            <TextField label={t('accountsPage.dialogs.initialBalance')} type="number" value={initialBalance} onChange={(event) => setInitialBalance(event.target.value)} />
-          </form>
-        </DialogShell>
       ) : null}
 
-      {editingAccountID ? (
-        <DialogShell
-          title={t('accountsPage.dialogs.editAccountTitle')}
-          description={t('accountsPage.dialogs.editAccountDescription')}
-          onClose={() => setEditingAccountID(null)}
-          footer={
-            <>
-              <Button variant="ghost" onClick={() => setEditingAccountID(null)}>{t('common.cancel')}</Button>
-              <Button type="submit" form="edit-account-form">{t('common.saveChanges')}</Button>
-            </>
-          }
-        >
-          <form id="edit-account-form" className="grid gap-5 md:grid-cols-2" onSubmit={(event) => void handleUpdateAccount(event)}>
-            <TextField label={t('accountsPage.dialogs.accountName')} value={editName} onChange={(event) => setEditName(event.target.value)} />
-            <SelectField label={t('accountsPage.dialogs.accountType')} value={editType} onChange={(event) => setEditType(event.target.value)}>
-              <option value="cash">{t('accountTypes.cash')}</option>
-              <option value="bank">{t('accountTypes.bank')}</option>
-              <option value="credit">{t('accountTypes.credit')}</option>
-            </SelectField>
-          </form>
-        </DialogShell>
-      ) : null}
-
-      {showLedgerDialog ? (
-        <DialogShell
-          title={t('accountsPage.dialogs.createLedgerTitle')}
-          description={t('accountsPage.dialogs.createLedgerDescription')}
-          onClose={() => setShowLedgerDialog(false)}
-          footer={
-            <>
-              <Button variant="ghost" onClick={() => setShowLedgerDialog(false)}>{t('common.cancel')}</Button>
-              <Button type="submit" form="create-ledger-form">{t('accountsPage.dialogs.createLedgerTitle')}</Button>
-            </>
-          }
-        >
-          <form id="create-ledger-form" className="grid gap-5" onSubmit={(event) => void handleCreateLedger(event)}>
-            <TextField label={t('accountsPage.dialogs.ledgerName')} value={ledgerName} onChange={(event) => setLedgerName(event.target.value)} />
-          </form>
-        </DialogShell>
-      ) : null}
-
-      {editingLedgerID ? (
-        <DialogShell
-          title={t('accountsPage.dialogs.editLedgerTitle')}
-          description={t('accountsPage.dialogs.editLedgerDescription')}
-          onClose={() => setEditingLedgerID(null)}
-          footer={
-            <>
-              <Button variant="ghost" onClick={() => setEditingLedgerID(null)}>{t('common.cancel')}</Button>
-              <Button type="submit" form="edit-ledger-form">{t('common.saveChanges')}</Button>
-            </>
-          }
-        >
-          <form id="edit-ledger-form" className="grid gap-5" onSubmit={(event) => void handleUpdateLedger(event)}>
-            <TextField label={t('accountsPage.dialogs.ledgerName')} value={editingLedgerName} onChange={(event) => setEditingLedgerName(event.target.value)} />
-          </form>
-        </DialogShell>
+      {dialog ? (
+        <AccountDialog
+          key={dialog.mode === 'edit' ? dialog.account.id : 'create'}
+          state={dialog}
+          onClose={() => setDialog(null)}
+        />
       ) : null}
     </div>
+  )
+}
+
+function AccountsSkeleton({ label }: { label: string }) {
+  return (
+    <div role="status" aria-busy="true" className="grid items-start gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <span className="sr-only">{label}</span>
+      <div aria-hidden="true" className="h-[188px] rounded-lg bg-segment-track motion-safe:animate-pulse" />
+      <div aria-hidden="true" className="space-y-px overflow-hidden rounded-lg border border-black/10 bg-white">
+        {[0, 1, 2].map((row) => (
+          <div key={row} className="flex items-center gap-3 px-4 py-4">
+            <div className="h-9 w-9 rounded-full bg-ground motion-safe:animate-pulse" />
+            <div className="flex-1 space-y-2">
+              <div className="h-3.5 w-1/3 rounded bg-ground motion-safe:animate-pulse" />
+              <div className="h-3 w-1/5 rounded bg-ground motion-safe:animate-pulse" />
+            </div>
+            <div className="h-4 w-20 rounded bg-ground motion-safe:animate-pulse" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function AccountRow({ account, onEdit }: { account: AccountItem; onEdit: () => void }) {
+  const { t } = useTranslation()
+  const balance = getCurrentBalance(account)
+  const Icon = isKnownAccountType(account.type) ? ACCOUNT_TYPE_ICONS[account.type] : CircleDollarSign
+  const meta = [t(getAccountTypeLabelKey(account.type))]
+  if (balance < 0) meta.push(t('accountsPage.owed'))
+  if (account.initial_balance !== balance) {
+    meta.push(t('accountsPage.openingBalance', { amount: formatCurrency(account.initial_balance) }))
+  }
+
+  return (
+    <li className="flex items-center gap-1 pr-2">
+      <Link
+        to={`/transactions?account=${encodeURIComponent(account.id)}`}
+        className="flex min-h-16 min-w-0 flex-1 items-center gap-3 py-3 pl-4 pr-2 transition-colors hover:bg-ground focus-visible:relative focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-action motion-reduce:transition-none"
+      >
+        <span aria-hidden="true" className="hidden h-9 w-9 shrink-0 place-items-center rounded-full bg-ground text-ink-secondary sm:grid">
+          <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[15px] font-semibold leading-5 text-ink">{account.name}</span>
+          <span className="mt-0.5 block truncate text-xs leading-5 text-ink-tertiary">{meta.join(' · ')}</span>
+        </span>
+        <span className="shrink-0 text-right text-[15px] font-bold tabular-nums text-ink sm:text-[17px]">{formatCurrency(balance)}</span>
+        <span className="sr-only">{t('accountsPage.viewTransactions')}</span>
+        <ChevronRight aria-hidden="true" className="hidden h-4 w-4 shrink-0 text-ink-tertiary sm:block" />
+      </Link>
+      <button
+        type="button"
+        aria-label={t('accountsPage.editAccountLabel', { name: account.name })}
+        className={`grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink-secondary transition hover:bg-action-tint hover:text-action motion-reduce:transition-none ${FOCUS_RING_CLASS}`}
+        onClick={onEdit}
+      >
+        <Pencil aria-hidden="true" className="h-4 w-4" />
+      </button>
+    </li>
+  )
+}
+
+function AccountDialog({ state, onClose }: { state: AccountDialogState; onClose: () => void }) {
+  const { t } = useTranslation()
+  const createAccountMutation = useCreateAccount()
+  const updateAccountMutation = useUpdateAccount()
+  const editing = state.mode === 'edit' ? state.account : null
+
+  const [name, setName] = useState(editing?.name ?? '')
+  const [type, setType] = useState<string>(editing?.type ?? 'debit')
+  const [balanceInput, setBalanceInput] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [confirmArchive, setConfirmArchive] = useState(false)
+  const [archiveError, setArchiveError] = useState<string | null>(null)
+
+  const trimmedName = name.trim()
+  const parsedBalance = parseAmountInput(balanceInput)
+  const nameError = submitted && !trimmedName ? t('accountsPage.dialogs.accountNameRequired') : undefined
+  const balanceError = submitted && parsedBalance === null ? t('accountsPage.dialogs.initialBalanceInvalid') : undefined
+  const isCredit = type === 'credit'
+  const pending = createAccountMutation.isPending || updateAccountMutation.isPending
+  const formId = editing ? 'edit-account-form' : 'create-account-form'
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setSubmitted(true)
+    setFormError(null)
+    if (!trimmedName || (!editing && parsedBalance === null)) return
+
+    try {
+      if (editing) {
+        await updateAccountMutation.mutateAsync({
+          id: editing.id,
+          name: trimmedName !== editing.name ? trimmedName : undefined,
+          type: type !== editing.type ? type : undefined,
+        })
+      } else {
+        // Credit cards ask for the amount owed as a positive number; store it as a liability.
+        const amount = parsedBalance ?? 0
+        await createAccountMutation.mutateAsync({
+          name: trimmedName,
+          type,
+          initial_balance: isCredit ? -Math.abs(amount) : amount,
+        })
+      }
+      onClose()
+    } catch (error) {
+      setFormError(t('accountsPage.dialogs.saveFailed', { message: getFriendlyApiErrorMessage(error, t) }))
+    }
+  }
+
+  async function handleArchive() {
+    if (!editing) return
+    setArchiveError(null)
+    try {
+      await updateAccountMutation.mutateAsync({ id: editing.id, archived: true })
+      onClose()
+    } catch (error) {
+      setArchiveError(t('accountsPage.dialogs.saveFailed', { message: getFriendlyApiErrorMessage(error, t) }))
+    }
+  }
+
+  if (confirmArchive && editing) {
+    return (
+      <ConfirmDialog
+        title={t('accountsPage.dialogs.archiveConfirmTitle', { name: editing.name })}
+        description={t('accountsPage.dialogs.archiveConfirmBody', { amount: formatCurrency(getCurrentBalance(editing)) })}
+        confirmLabel={t('accountsPage.dialogs.archiveAccount')}
+        pending={updateAccountMutation.isPending}
+        error={archiveError}
+        onConfirm={() => void handleArchive()}
+        onCancel={() => setConfirmArchive(false)}
+      />
+    )
+  }
+
+  return (
+    <DialogShell
+      title={editing ? t('accountsPage.dialogs.editAccountTitle') : t('accountsPage.dialogs.createAccountTitle')}
+      description={editing ? t('accountsPage.dialogs.editAccountDescription') : t('accountsPage.dialogs.createAccountDescription')}
+      onClose={pending ? undefined : onClose}
+      className="max-w-xl"
+      footer={
+        <>
+          <Button variant="ghost" className="min-h-11" onClick={onClose} disabled={pending}>
+            {t('common.cancel')}
+          </Button>
+          <Button type="submit" form={formId} className="min-h-11" disabled={pending} aria-busy={pending}>
+            {pending
+              ? editing
+                ? t('accountsPage.dialogs.saving')
+                : t('accountsPage.dialogs.creating')
+              : editing
+                ? t('common.saveChanges')
+                : t('accountsPage.dialogs.create')}
+          </Button>
+        </>
+      }
+    >
+      <form id={formId} noValidate className="grid gap-4 md:grid-cols-2 md:gap-5" onSubmit={(event) => void handleSubmit(event)}>
+        <div className="md:col-span-2">
+          <TextField
+            label={t('accountsPage.dialogs.accountName')}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder={t('accountsPage.dialogs.accountNamePlaceholder')}
+            maxLength={60}
+            required
+            aria-invalid={nameError ? true : undefined}
+            error={nameError}
+            autoComplete="off"
+          />
+        </div>
+        <SelectField label={t('accountsPage.dialogs.accountType')} value={type} onChange={(event) => setType(event.target.value)}>
+          {ACCOUNT_TYPES.map((value) => (
+            <option key={value} value={value}>
+              {t(`accountTypes.${value}`)}
+            </option>
+          ))}
+          {editing && !isKnownAccountType(editing.type) ? (
+            <option value={editing.type}>{t('accountsPage.dialogs.otherType', { value: editing.type })}</option>
+          ) : null}
+        </SelectField>
+        {!editing ? (
+          <TextField
+            label={isCredit ? t('accountsPage.dialogs.initialDebt') : t('accountsPage.dialogs.initialBalance')}
+            value={balanceInput}
+            onChange={(event) => setBalanceInput(event.target.value)}
+            inputMode="decimal"
+            placeholder="0.00"
+            aria-invalid={balanceError ? true : undefined}
+            error={balanceError}
+            helperText={isCredit ? t('accountsPage.dialogs.initialDebtHelper') : t('accountsPage.dialogs.initialBalanceHelper')}
+            autoComplete="off"
+          />
+        ) : null}
+        {formError ? (
+          <p role="alert" className="rounded-lg bg-error-container px-3 py-2 text-sm font-medium text-on-error-container md:col-span-2">
+            {formError}
+          </p>
+        ) : null}
+        {editing ? (
+          <div className="border-t border-black/10 pt-4 md:col-span-2">
+            <p className="text-sm font-semibold text-ink">{t('accountsPage.dialogs.archiveSectionTitle')}</p>
+            <p className="mt-1 text-sm leading-6 text-ink-secondary">{t('accountsPage.dialogs.archiveSectionBody')}</p>
+            <Button
+              variant="destructive-ghost"
+              className="-ml-3 mt-1 min-h-11 px-3"
+              onClick={() => setConfirmArchive(true)}
+              disabled={pending}
+            >
+              {t('accountsPage.dialogs.archiveAccount')}
+            </Button>
+          </div>
+        ) : null}
+      </form>
+    </DialogShell>
   )
 }

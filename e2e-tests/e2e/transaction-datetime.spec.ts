@@ -2,7 +2,7 @@ import { expect, test } from './fixture'
 import {
   bootstrapAuthedSession,
   createAccountOnAccountsPage,
-  createLedgerOnAccountsPage,
+  createLedgerInSettings,
   openAccounts,
   openTransactions,
   uniqueName,
@@ -14,7 +14,7 @@ test('transactions flow: create transaction with second-level timestamp', async 
   const localDateTime = '2026-03-03T12:34:56'
 
   await openAccounts(page)
-  await createLedgerOnAccountsPage(page, uniqueName('E2E Timestamp Ledger'))
+  await createLedgerInSettings(page, uniqueName('E2E Timestamp Ledger'))
   await createAccountOnAccountsPage(page, {
     name: uniqueName('E2E Timestamp Wallet'),
     initialBalance: '1000',

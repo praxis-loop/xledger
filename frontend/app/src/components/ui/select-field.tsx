@@ -17,6 +17,9 @@ export function SelectField({
   ...props
 }: SelectFieldProps) {
   const selectId = id ?? label.toLowerCase().replace(/\s+/g, '-')
+  const helperId = helperText ? `${selectId}-helper` : undefined
+  const errorId = error ? `${selectId}-error` : undefined
+  const describedBy = [props['aria-describedby'], helperId, errorId].filter(Boolean).join(' ') || undefined
 
   return (
     <div className="block space-y-2">
@@ -31,11 +34,13 @@ export function SelectField({
           className,
         )}
         {...props}
+        aria-invalid={error ? true : props['aria-invalid']}
+        aria-describedby={describedBy}
       >
         {children}
       </select>
-      {helperText ? <p className="text-xs leading-5 text-ink-secondary">{helperText}</p> : null}
-      {error ? <p className="text-xs font-medium text-error">{error}</p> : null}
+      {helperText ? <p id={helperId} className="text-xs leading-5 text-ink-secondary">{helperText}</p> : null}
+      {error ? <p id={errorId} className="text-xs font-medium text-error">{error}</p> : null}
     </div>
   )
 }

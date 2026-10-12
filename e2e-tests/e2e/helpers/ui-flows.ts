@@ -29,7 +29,7 @@ export async function bootstrapAuthedSession(page: Page, testInfo: TestInfo): Pr
 
 export async function openAccounts(page: Page) {
   await page.getByRole('link', { name: 'Accounts' }).click()
-  await expect(page.getByRole('heading', { name: 'Accounts' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Accounts', exact: true })).toBeVisible()
 }
 
 export async function openTransactions(page: Page) {
@@ -49,21 +49,25 @@ export async function openAnalytics(page: Page) {
 
 export async function openSettings(page: Page) {
   await page.getByRole('link', { name: 'Settings' }).click()
-  await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
 }
 
 export async function createAccountOnAccountsPage(page: Page, input: { name: string; initialBalance: string }) {
-  await page.getByRole('button', { name: 'New Account' }).click()
-  await page.getByLabel('Account Name').fill(input.name)
-  await page.getByLabel('Initial Balance').fill(input.initialBalance)
-  await page.getByRole('button', { name: 'Create Account' }).click()
+  await openAccounts(page)
+  // A user with no accounts only sees the empty-state call to action.
+  await page.getByRole('button', { name: /^(New account|Create your first account)$/ }).click()
+  await page.getByLabel('Account name').fill(input.name)
+  await page.getByLabel('Initial balance').fill(input.initialBalance)
+  await page.getByRole('button', { name: 'Create account' }).click()
   await expect(page.getByText(input.name)).toBeVisible()
 }
 
-export async function createLedgerOnAccountsPage(page: Page, ledgerName: string) {
-  await page.getByRole('button', { name: 'New Ledger' }).click()
-  await page.getByLabel('Ledger Name').fill(ledgerName)
-  await page.getByRole('button', { name: 'Create Ledger' }).click()
+// Ledgers are managed in Settings (moved off the Accounts page).
+export async function createLedgerInSettings(page: Page, ledgerName: string) {
+  await openSettings(page)
+  await page.getByRole('button', { name: 'New ledger' }).click()
+  await page.getByLabel('Ledger name').fill(ledgerName)
+  await page.getByRole('button', { name: 'Create ledger' }).click()
   await expect(page.getByText(ledgerName)).toBeVisible()
 }
 

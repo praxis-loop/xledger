@@ -12,6 +12,9 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
   ref,
 ) {
   const inputId = id ?? label.toLowerCase().replace(/\s+/g, '-')
+  const helperId = helperText ? `${inputId}-helper` : undefined
+  const errorId = error ? `${inputId}-error` : undefined
+  const describedBy = [props['aria-describedby'], helperId, errorId].filter(Boolean).join(' ') || undefined
 
   return (
     <div className="block space-y-2">
@@ -27,9 +30,11 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
           className,
         )}
         {...props}
+        aria-invalid={error ? true : props['aria-invalid']}
+        aria-describedby={describedBy}
       />
-      {helperText ? <p className="text-xs leading-5 text-ink-secondary">{helperText}</p> : null}
-      {error ? <p className="text-xs font-medium text-error">{error}</p> : null}
+      {helperText ? <p id={helperId} className="text-xs leading-5 text-ink-secondary">{helperText}</p> : null}
+      {error ? <p id={errorId} className="text-xs font-medium text-error">{error}</p> : null}
     </div>
   )
 })

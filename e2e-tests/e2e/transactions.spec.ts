@@ -2,7 +2,7 @@ import { expect, test } from './fixture'
 import {
   bootstrapAuthedSession,
   createAccountOnAccountsPage,
-  createLedgerOnAccountsPage,
+  createLedgerInSettings,
   createTransactionOnTransactionsPage,
   openAccounts,
   openTransactions,
@@ -17,7 +17,7 @@ test('transactions flow: create expense and income records', async ({ page, reco
     name: uniqueName('E2E Wallet'),
     initialBalance: '1000',
   })
-  await createLedgerOnAccountsPage(page, uniqueName('E2E Transaction Ledger'))
+  await createLedgerInSettings(page, uniqueName('E2E Transaction Ledger'))
 
   await openTransactions(page)
 
@@ -50,7 +50,7 @@ test('transactions flow: quick filters, delete, and undo', async ({ page, record
     name: uniqueName('E2E Filter Wallet'),
     initialBalance: '1000',
   })
-  await createLedgerOnAccountsPage(page, uniqueName('E2E Filter Ledger'))
+  await createLedgerInSettings(page, uniqueName('E2E Filter Ledger'))
 
   await openTransactions(page)
 
@@ -202,7 +202,7 @@ test('transactions flow: export current transaction range as CSV', async ({ page
     name: uniqueName('E2E Export Wallet'),
     initialBalance: '1000',
   })
-  await createLedgerOnAccountsPage(page, uniqueName('E2E Export Ledger'))
+  await createLedgerInSettings(page, uniqueName('E2E Export Ledger'))
 
   await openTransactions(page)
 

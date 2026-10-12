@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, PropsWithChildren } from 'react'
 import { cn } from '@/lib/utils'
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost'
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'destructive' | 'destructive-ghost'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
@@ -14,6 +14,11 @@ const variants: Record<ButtonVariant, string> = {
     'border border-black/10 bg-white text-action hover:bg-action-tint active:bg-action-tint-pressed disabled:cursor-not-allowed disabled:opacity-50',
   ghost:
     'bg-transparent text-action hover:bg-action-tint active:bg-action-tint-pressed disabled:cursor-not-allowed disabled:opacity-50',
+  // Irreversible or data-hiding actions. Uses the error red, never the expense red (DESIGN.md).
+  destructive:
+    'bg-error text-white hover:bg-on-error-container active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100',
+  'destructive-ghost':
+    'bg-transparent text-error hover:bg-error-container active:bg-error-container disabled:cursor-not-allowed disabled:opacity-50',
 }
 
 export function Button({

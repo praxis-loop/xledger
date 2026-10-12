@@ -491,7 +491,7 @@ export function TransactionsPage() {
   const [importDefaultLedgerId, setImportDefaultLedgerId] = useState(() => readImportDefaults().ledgerId)
   const [dateRangePreset, setDateRangePreset] = useState<'' | '7' | '30' | '120' | '365'>('')
   const [listSearchQuery, setListSearchQuery] = useState(searchParamQ)
-  const [selectedAccountFilter, setSelectedAccountFilter] = useState('')
+  const [selectedAccountFilter, setSelectedAccountFilter] = useState(() => (searchParams.get('account') ?? '').trim())
   const [selectedLedgerFilter, setSelectedLedgerFilter] = useState('')
   const [amountMinFilter, setAmountMinFilter] = useState('')
   const [amountMaxFilter, setAmountMaxFilter] = useState('')
@@ -703,6 +703,8 @@ export function TransactionsPage() {
     [options.categoriesQuery.data?.items],
   )
   const accounts = options.accountsQuery.data?.items ?? []
+  // Archived accounts stay available for filtering history but can't receive new transactions.
+  const activeAccounts = useMemo(() => accounts.filter((account) => !account.archived_at), [accounts])
   const ledgers = options.ledgersQuery.data?.items ?? []
   const tags = options.tagsQuery.data?.items ?? []
   const getTransactionTypeLabel = (type: TransactionKind) =>
@@ -745,11 +747,11 @@ export function TransactionsPage() {
 
   useEffect(() => {
     if (!options.accountsQuery.isSuccess) return
-    const accountExists = importDefaultAccountId && accounts.some((account) => account.id === importDefaultAccountId)
+    const accountExists = importDefaultAccountId && activeAccounts.some((account) => account.id === importDefaultAccountId)
     if (!accountExists) {
-      setImportDefaultAccountId(accounts[0]?.id ?? '')
+      setImportDefaultAccountId(activeAccounts[0]?.id ?? '')
     }
-  }, [accounts, importDefaultAccountId, options.accountsQuery.isSuccess])
+  }, [activeAccounts, importDefaultAccountId, options.accountsQuery.isSuccess])
 
   useEffect(() => {
     if (!options.ledgersQuery.isSuccess) return
@@ -761,15 +763,15 @@ export function TransactionsPage() {
   }, [importDefaultLedgerId, ledgers, options.ledgersQuery.isSuccess])
 
   useEffect(() => {
-    if (!accountId && accounts.length === 1) {
-      setAccountId(accounts[0].id)
-    } else if (accountId && accounts.length > 0 && !accounts.some((account) => account.id === accountId)) {
+    if (!accountId && activeAccounts.length === 1) {
+      setAccountId(activeAccounts[0].id)
+    } else if (accountId && activeAccounts.length > 0 && !activeAccounts.some((account) => account.id === accountId)) {
       setAccountId('')
     }
     if (categoryId && transactionTypeCategories.length > 0 && !transactionTypeCategories.some((category) => category.id === categoryId)) {
       setCategoryId('')
     }
-  }, [accountId, accounts, categoryId, transactionTypeCategories])
+  }, [accountId, activeAccounts, categoryId, transactionTypeCategories])
 
   const filteredListTransactions = useMemo(() => {
     const now = new Date()
@@ -2101,7 +2103,7 @@ export function TransactionsPage() {
                         onChange={(event) => setImportDefaultAccountId(event.target.value)}
                       >
                         <option value="">{t('transactionsPage.addDialog.selectAccount')}</option>
-                        {accounts.map((account) => (
+                        {activeAccounts.map((account) => (
                           <option key={account.id} value={account.id}>
                             {account.name}
                           </option>
@@ -2300,10 +2302,10 @@ export function TransactionsPage() {
               aria-label={t('transaction.account')}
               value={accountId}
               onChange={(event) => setAccountId(event.target.value)}
-              helperText={accounts.length === 1 ? t('transactionsPage.addDialog.singleAccountHelper') : undefined}
+              helperText={activeAccounts.length === 1 ? t('transactionsPage.addDialog.singleAccountHelper') : undefined}
             >
               <option value="">{t('transactionsPage.addDialog.selectAccount')}</option>
-              {accounts.map((account) => (
+              {activeAccounts.map((account) => (
                 <option key={account.id} value={account.id}>
                   {account.name}
                 </option>
