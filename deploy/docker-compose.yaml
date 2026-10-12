@@ -19,6 +19,12 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      default:
+        # backend-entrypoint.sh rewrites 127.0.0.1:5432 to shared-postgres:5432 (the server's shared
+        # database); this alias lets the same entrypoint reach the bundled postgres in this stack.
+        aliases:
+          - shared-postgres
 
   redis:
     image: ${REDIS_IMAGE:-docker.m.daocloud.io/library/redis:7-alpine}
