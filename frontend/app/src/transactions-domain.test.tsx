@@ -439,12 +439,7 @@ describe('transactions domain', () => {
     expect(within(page).getAllByRole('button', { name: /add transaction/i })).toHaveLength(1)
     const desktopActions = within(page).getByTestId('desktop-transaction-actions')
     const exportSummary = await within(desktopActions).findByText(/export 5 transactions/i)
-    expect(exportSummary).toHaveClass(
-      'rounded-full',
-      'bg-surface-container',
-      'px-3',
-      'py-1.5',
-    )
+    expect(exportSummary).toHaveClass('text-[13px]', 'text-ink-tertiary')
 
     const smartViews = within(page).getByRole('region', { name: /smart views/i })
     expect(within(within(smartViews).getByTestId('mobile-smart-view-list')).getAllByRole('button')).toHaveLength(4)

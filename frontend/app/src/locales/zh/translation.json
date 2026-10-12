@@ -432,6 +432,8 @@
       "income": "收入",
       "expense": "支出",
       "net": "净额",
+      "previousMonth": "上个月",
+      "nextMonth": "下个月",
       "weekdays": {
         "sun": "周日",
         "mon": "周一",

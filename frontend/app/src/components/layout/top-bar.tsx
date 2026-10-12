@@ -56,7 +56,7 @@ export function TopBar() {
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
             placeholder={t('layout.topBar.searchPlaceholder')}
-            className="h-11 w-full rounded-lg border border-outline/20 bg-surface-container-low pl-9 pr-24 text-sm text-on-surface placeholder:text-on-surface-variant/70"
+            className="h-11 w-full rounded-lg border border-black/10 bg-ground pl-9 pr-24 text-sm text-ink transition placeholder:text-ink-tertiary focus:border-action focus:bg-white focus:ring-1 focus:ring-action motion-reduce:transition-none"
           />
           <Button type="submit" variant="ghost" className="absolute right-1 top-1 h-9 px-3 text-xs">
             {t('common.search')}
@@ -145,7 +145,7 @@ export function TopBar() {
             <div className="text-right leading-tight">
               <p className="text-sm font-semibold text-on-surface">{displayName}</p>
             </div>
-            <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-xs font-bold text-white">
+            <div className="grid h-8 w-8 place-items-center rounded-full bg-action text-xs font-bold text-white">
               {(displayName[0] ?? 'U').toUpperCase()}
             </div>
           </button>

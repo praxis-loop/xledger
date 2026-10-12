@@ -34,6 +34,31 @@ import { formatCurrency } from '@/lib/format'
 import { getFriendlyApiErrorMessage } from '@/lib/api'
 
 const IMPORT_DEFAULTS_STORAGE_KEY = 'xledger.import.defaults'
+const FIELD_CLASS =
+  'h-11 w-full rounded-lg border border-black/15 bg-white px-3 text-sm text-ink transition placeholder:text-ink-tertiary focus:border-action focus:ring-1 focus:ring-action motion-reduce:transition-none'
+const FIELD_LABEL_CLASS = 'text-[13px] font-semibold leading-5 text-ink-secondary'
+const FOCUS_RING_CLASS = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action'
+const ICON_BUTTON_CLASS = `grid h-9 w-9 place-items-center rounded-lg border border-black/10 text-ink-secondary transition hover:bg-action-tint hover:text-action disabled:opacity-50 motion-reduce:transition-none ${FOCUS_RING_CLASS}`
+
+type TransactionKind = TransactionRecord['type']
+
+// Money direction is carried by sign + color together; transfers stay neutral (no transfer hue is defined yet).
+const AMOUNT_TONE_CLASS: Record<TransactionKind, string> = {
+  income: 'text-income',
+  expense: 'text-expense',
+  transfer: 'text-ink',
+}
+
+const TYPE_CHIP_CLASS: Record<TransactionKind, string> = {
+  income: 'bg-income-tint text-income',
+  expense: 'bg-expense-tint text-expense',
+  transfer: 'bg-ground text-ink-control',
+}
+
+function formatSignedAmount(type: TransactionKind, amount: number) {
+  const sign = type === 'income' ? '+' : type === 'expense' ? '-' : ''
+  return `${sign}${formatCurrency(Math.abs(amount))}`
+}
 const TRANSACTION_DEFAULTS_STORAGE_KEY = 'xledger.transaction.defaults'
 
 type ImportMapping = {
@@ -117,6 +142,12 @@ function buildCategoryOptionGroups(categories: CategoryOption[]) {
 
 function toLocalDateKey(value: Date) {
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`
+}
+
+// Date keys are local calendar days; `new Date('YYYY-MM-DD')` would parse them as UTC midnight and shift the day west of UTC.
+function fromLocalDateKey(key: string) {
+  const [year, month, day] = key.split('-').map(Number)
+  return new Date(year, month - 1, day)
 }
 
 function toLocalDateTimeInputValue(value: Date) {
@@ -451,6 +482,7 @@ export function TransactionsPage() {
   const [categoryId, setCategoryId] = useState(() => readTransactionDefaults().categoryId)
   const [accountId, setAccountId] = useState(() => readTransactionDefaults().accountId)
   const [memo, setMemo] = useState('')
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
   const [date, setDate] = useState(() => toLocalDateTimeInputValue(new Date()))
   const [importFile, setImportFile] = useState<File | null>(null)
   const [importResult, setImportResult] = useState<ImportConfirmResponse | null>(null)
@@ -673,6 +705,8 @@ export function TransactionsPage() {
   const accounts = options.accountsQuery.data?.items ?? []
   const ledgers = options.ledgersQuery.data?.items ?? []
   const tags = options.tagsQuery.data?.items ?? []
+  const getTransactionTypeLabel = (type: TransactionKind) =>
+    type === 'income' ? t('transaction.typeIncome') : type === 'expense' ? t('transaction.typeExpense') : t('transaction.typeTransfer')
 
   const accountNameById = useMemo(() => new Map(accounts.map((account) => [account.id, account.name])), [accounts])
   const ledgerNameById = useMemo(() => new Map(ledgers.map((ledger) => [ledger.id, ledger.name])), [ledgers])
@@ -870,6 +904,7 @@ export function TransactionsPage() {
       type: transactionType,
       amount: Number(amount),
       memo: memo || undefined,
+      tag_ids: selectedTagIds.length > 0 ? selectedTagIds : undefined,
       occurred_at: occurredAt,
     })
     writeTransactionDefaults(transactionType, accountId, categoryId)
@@ -877,6 +912,7 @@ export function TransactionsPage() {
     setShowAddDialog(false)
     setAmount('')
     setMemo('')
+    setSelectedTagIds([])
     setDate(toLocalDateTimeInputValue(new Date()))
     setTransactionMessage(t('transactionsPage.addDialog.saved'))
   }
@@ -1184,13 +1220,9 @@ export function TransactionsPage() {
 
   return (
     <div className="-mx-4 w-[calc(100%+2rem)] space-y-5 px-4 min-[1000px]:mx-0 min-[1000px]:w-auto min-[1000px]:px-0">
-      <section
-        data-testid="mobile-transaction-page"
-        data-ui="ios-transactions-page"
-        className="border-0 bg-transparent shadow-none min-[1000px]:rounded-2xl min-[1000px]:border min-[1000px]:border-outline/15 min-[1000px]:bg-surface-container-lowest min-[1000px]:p-6 min-[1000px]:shadow-ambient"
-      >
+      <section data-testid="mobile-transaction-page" data-ui="ios-transactions-page">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h2 className="font-headline text-[34px] font-extrabold leading-tight text-primary min-[1000px]:text-[42px]">
+          <h2 className="font-headline text-[34px] font-bold leading-tight tracking-normal text-ink md:text-[44px] md:font-extrabold">
             {t('transactionsPage.title')}
           </h2>
           <SegmentedControl
@@ -1205,19 +1237,20 @@ export function TransactionsPage() {
           />
           <div className="flex items-center gap-2 min-[1000px]:gap-3">
             <div data-testid="desktop-transaction-actions" className="hidden items-center gap-3 min-[1000px]:flex">
+              <span className="hidden text-[13px] text-ink-tertiary xl:inline">
+                {t('transactionsPage.exportSummary', { count: exportTotal })}
+              </span>
               <Button
                 variant="secondary"
+                className="min-h-11"
                 onClick={() => void handleExportTransactions()}
                 disabled={exportTransactionsMutation.isPending}
               >
-                <Download className="h-4 w-4" />
+                <Download aria-hidden="true" className="h-4 w-4" />
                 {exportTransactionsMutation.isPending ? t('transactionsPage.exporting') : t('transactionsPage.export')}
               </Button>
-              <span className="rounded-full bg-surface-container px-3 py-1.5 text-xs font-bold text-on-surface-variant">
-                {t('transactionsPage.exportSummary', { count: exportTotal })}
-              </span>
-              <Button variant="secondary" onClick={() => setShowImportDialog(true)}>
-                <Upload className="h-4 w-4" />
+              <Button variant="secondary" className="min-h-11" onClick={() => setShowImportDialog(true)}>
+                <Upload aria-hidden="true" className="h-4 w-4" />
                 {t('transactionsPage.import')}
               </Button>
             </div>
@@ -1229,10 +1262,10 @@ export function TransactionsPage() {
                 aria-haspopup="menu"
                 aria-expanded={mobileActionsOpen}
                 aria-controls="mobile-transaction-actions"
-                className="grid h-11 w-11 place-items-center rounded-full border border-outline/15 bg-white text-primary shadow-sm"
+                className={`grid h-11 w-11 place-items-center rounded-full border border-black/10 bg-white text-action transition hover:bg-action-tint motion-reduce:transition-none ${FOCUS_RING_CLASS}`}
                 onClick={() => setMobileActionsOpen((current) => !current)}
               >
-                <Ellipsis className="h-5 w-5" />
+                <Ellipsis aria-hidden="true" className="h-5 w-5" />
               </button>
               {mobileActionsOpen ? (
                 <div
@@ -1240,14 +1273,14 @@ export function TransactionsPage() {
                   id="mobile-transaction-actions"
                   role="menu"
                   aria-label={t('transactionsPage.mobileActions.menuLabel')}
-                  className="absolute right-0 top-12 z-30 min-w-40 overflow-hidden rounded-xl border border-outline/15 bg-white p-1 shadow-ambient"
+                  className="absolute right-0 top-12 z-30 min-w-40 overflow-hidden rounded-xl border border-black/10 bg-white p-1 shadow-ambient"
                   onKeyDown={handleMobileActionsKeyDown}
                 >
                   <button
                     role="menuitem"
                     type="button"
                     tabIndex={-1}
-                    className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-on-surface hover:bg-surface-container-low"
+                    className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-ink outline-none hover:bg-ground focus-visible:bg-action-tint focus-visible:text-action"
                     onClick={handleMobileImport}
                   >
                     {t('transactionsPage.import')}
@@ -1257,7 +1290,7 @@ export function TransactionsPage() {
                     type="button"
                     tabIndex={-1}
                     disabled={exportTransactionsMutation.isPending}
-                    className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-on-surface hover:bg-surface-container-low disabled:opacity-60"
+                    className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-ink outline-none hover:bg-ground focus-visible:bg-action-tint focus-visible:text-action disabled:opacity-60"
                     onClick={() => void handleMobileExportTransactions()}
                   >
                     {exportTransactionsMutation.isPending ? t('transactionsPage.exporting') : t('transactionsPage.export')}
@@ -1270,7 +1303,7 @@ export function TransactionsPage() {
               className="h-11 min-w-11 px-3 min-[1000px]:px-4"
               onClick={() => setShowAddDialog(true)}
             >
-              <Plus className="h-5 w-5 min-[1000px]:hidden" />
+              <Plus aria-hidden="true" className="h-5 w-5 min-[1000px]:hidden" />
               <span className="hidden min-[1000px]:inline">{t('transactionsPage.addTransaction')}</span>
             </Button>
           </div>
@@ -1284,24 +1317,24 @@ export function TransactionsPage() {
         ) : null}
 
         {view === 'list' ? (
-          <div className="mt-6 space-y-4">
+          <div className="mt-5 space-y-4">
             <article
               role="region"
               aria-labelledby="transaction-smart-views-title"
               data-ui="ios-grouped-list"
-              className="bg-transparent p-0 min-[1000px]:rounded-2xl min-[1000px]:border min-[1000px]:border-outline/10 min-[1000px]:bg-surface-container-low min-[1000px]:p-5"
+              className="bg-transparent p-0 min-[1000px]:rounded-lg min-[1000px]:border min-[1000px]:border-black/10 min-[1000px]:bg-white min-[1000px]:p-5"
             >
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h3 id="transaction-smart-views-title" className="font-headline text-2xl font-bold leading-tight text-on-surface">
+                  <h3 id="transaction-smart-views-title" className="font-headline text-xl font-bold leading-tight text-ink md:text-2xl">
                     {t('transactionsPage.smartViews.title')}
                   </h3>
-                  <p className="mt-1 text-sm text-on-surface-variant">{t('transactionsPage.smartViews.description')}</p>
+                  <p className="mt-1 text-sm text-ink-secondary">{t('transactionsPage.smartViews.description')}</p>
                 </div>
               </div>
               <div
                 data-testid="mobile-smart-view-list"
-                className="mb-4 overflow-hidden rounded-2xl bg-white min-[1000px]:grid min-[1000px]:grid-cols-4 min-[1000px]:gap-2 min-[1000px]:overflow-visible min-[1000px]:rounded-none min-[1000px]:bg-transparent"
+                className="mb-4 overflow-hidden rounded-lg border border-black/10 bg-white min-[1000px]:grid min-[1000px]:grid-cols-4 min-[1000px]:gap-2 min-[1000px]:overflow-visible min-[1000px]:rounded-none min-[1000px]:border-0 min-[1000px]:bg-transparent"
               >
                 {reviewReasonFilters.map((filter, index) => (
                   <button
@@ -1309,12 +1342,12 @@ export function TransactionsPage() {
                     type="button"
                     aria-label={t(`transactionsPage.reviewFocus.ariaLabels.${filter.id}`)}
                     aria-pressed={quickFilter === 'review' && reviewReasonFilter === filter.id}
-                    className={`flex min-h-11 w-full items-center gap-3 px-4 py-3 text-left text-sm font-bold transition min-[1000px]:rounded-full min-[1000px]:border min-[1000px]:px-3 min-[1000px]:py-2 min-[1000px]:text-xs ${
-                      index < reviewReasonFilters.length - 1 ? 'border-b border-outline/10 min-[1000px]:border-b' : ''
+                    className={`flex min-h-11 w-full items-center gap-3 px-4 py-3 text-left text-[15px] font-medium transition motion-reduce:transition-none focus-visible:relative focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-action min-[1000px]:rounded-full min-[1000px]:border min-[1000px]:px-3 min-[1000px]:py-2 min-[1000px]:text-[13px] min-[1000px]:font-semibold ${
+                      index < reviewReasonFilters.length - 1 ? 'border-b border-black/10 min-[1000px]:border-b' : ''
                     } ${
                       quickFilter === 'review' && reviewReasonFilter === filter.id
-                        ? 'bg-primary text-white min-[1000px]:border-primary'
-                        : 'text-on-surface hover:bg-surface-container-low min-[1000px]:border-outline/15 min-[1000px]:bg-white min-[1000px]:text-on-surface-variant'
+                        ? 'bg-action text-white min-[1000px]:border-action'
+                        : 'text-ink hover:bg-ground min-[1000px]:border-black/10 min-[1000px]:bg-white min-[1000px]:text-ink-control'
                     }`}
                     onClick={() => {
                       setQuickFilter('review')
@@ -1323,7 +1356,7 @@ export function TransactionsPage() {
                   >
                     <span className="flex-1">{filter.label}</span>
                     <span className="tabular-nums">{filter.count}</span>
-                    <ChevronRight className="h-4 w-4 text-on-surface-variant min-[1000px]:hidden" />
+                    <ChevronRight aria-hidden="true" className="h-4 w-4 opacity-60 min-[1000px]:hidden" />
                   </button>
                 ))}
               </div>
@@ -1336,10 +1369,10 @@ export function TransactionsPage() {
                     key={filter.id}
                     type="button"
                     aria-pressed={quickFilter === filter.id}
-                    className={`min-h-11 shrink-0 rounded-full border px-3 py-2 text-xs font-bold transition min-[1000px]:min-h-9 ${
+                    className={`min-h-11 shrink-0 rounded-full px-3.5 text-[13px] font-semibold transition motion-reduce:transition-none min-[1000px]:min-h-9 ${FOCUS_RING_CLASS} ${
                       quickFilter === filter.id
-                        ? 'border-primary bg-primary text-white shadow-sm'
-                        : 'border-outline/15 bg-white text-on-surface-variant hover:border-primary/30 hover:text-primary'
+                        ? 'bg-action text-white'
+                        : 'bg-ground text-ink-control hover:bg-segment-track'
                     }`}
                     onClick={() => {
                       setQuickFilter(filter.id)
@@ -1354,36 +1387,36 @@ export function TransactionsPage() {
               </div>
               <button
                 type="button"
-                className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-outline/15 bg-white px-3 py-2 text-xs font-bold text-on-surface-variant shadow-sm transition hover:border-primary/30 hover:text-primary min-[1000px]:hidden"
+                className={`mb-4 inline-flex min-h-11 items-center gap-2 rounded-lg border border-black/10 bg-white px-3 text-[13px] font-semibold text-action transition hover:bg-action-tint motion-reduce:transition-none min-[1000px]:hidden ${FOCUS_RING_CLASS}`}
                 aria-controls="transaction-advanced-filters"
                 aria-expanded={mobileFiltersExpanded}
                 onClick={() => setMobileFiltersExpanded((current) => !current)}
               >
-                <SlidersHorizontal className="h-4 w-4" />
+                <SlidersHorizontal aria-hidden="true" className="h-4 w-4" />
                 {mobileFiltersExpanded ? t('transactionsPage.filters.hideAdvanced') : t('transactionsPage.filters.showAdvanced')}
               </button>
               <div id="transaction-advanced-filters" className={`${mobileFiltersExpanded ? 'block' : 'hidden'} min-[1000px]:block`}>
-                <div className="grid gap-3 min-[1000px]:grid-cols-2 xl:grid-cols-6">
-                <label className="space-y-2">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+                <label className="space-y-1.5">
+                  <span className={FIELD_LABEL_CLASS}>
                     {t('transactionsPage.filters.searchLedger')}
                   </span>
                   <div className="relative">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
+                    <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-tertiary" />
                     <input
-                      className="h-11 w-full rounded-xl border border-outline/20 bg-white pl-9 pr-3 text-sm"
+                      className={`${FIELD_CLASS} pl-9`}
                       placeholder={t('transactionsPage.filters.searchPlaceholder')}
                       value={listSearchQuery}
                       onChange={(event) => setListSearchQuery(event.target.value)}
                     />
                   </div>
                 </label>
-                <label className="space-y-2">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
+                <label className="space-y-1.5">
+                  <span className={FIELD_LABEL_CLASS}>
                     {t('transactionsPage.filters.source')}
                   </span>
                   <select
-                    className="h-11 w-full rounded-xl border border-outline/20 bg-white px-3 text-sm"
+                    className={FIELD_CLASS}
                     value={selectedAccountFilter}
                     onChange={(event) => setSelectedAccountFilter(event.target.value)}
                   >
@@ -1395,12 +1428,12 @@ export function TransactionsPage() {
                     ))}
                   </select>
                 </label>
-                <label className="space-y-2">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
+                <label className="space-y-1.5">
+                  <span className={FIELD_LABEL_CLASS}>
                     {t('transactionsPage.filters.ledger')}
                   </span>
                   <select
-                    className="h-11 w-full rounded-xl border border-outline/20 bg-white px-3 text-sm"
+                    className={FIELD_CLASS}
                     value={selectedLedgerFilter}
                     onChange={(event) => setSelectedLedgerFilter(event.target.value)}
                   >
@@ -1412,12 +1445,12 @@ export function TransactionsPage() {
                     ))}
                   </select>
                 </label>
-                <label className="space-y-2">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
+                <label className="space-y-1.5">
+                  <span className={FIELD_LABEL_CLASS}>
                     {t('transactionsPage.filters.dateRange')}
                   </span>
                   <select
-                    className="h-11 w-full rounded-xl border border-outline/20 bg-white px-3 text-sm"
+                    className={FIELD_CLASS}
                     value={dateRangePreset}
                     onChange={(event) => setDateRangePreset(event.target.value as '' | '7' | '30' | '120' | '365')}
                   >
@@ -1428,13 +1461,13 @@ export function TransactionsPage() {
                     <option value="365">{t('transactionsPage.filters.last365Days')}</option>
                   </select>
                 </label>
-                <label className="space-y-2">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
+                <label className="space-y-1.5">
+                  <span className={FIELD_LABEL_CLASS}>
                     {t('transactionsPage.filters.amountMin')}
                   </span>
                   <input
                     aria-label={t('transactionsPage.filters.amountMin')}
-                    className="h-11 w-full rounded-xl border border-outline/20 bg-white px-3 text-sm"
+                    className={FIELD_CLASS}
                     inputMode="decimal"
                     min="0"
                     placeholder="0"
@@ -1443,13 +1476,13 @@ export function TransactionsPage() {
                     onChange={(event) => setAmountMinFilter(event.target.value)}
                   />
                 </label>
-                <label className="space-y-2">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
+                <label className="space-y-1.5">
+                  <span className={FIELD_LABEL_CLASS}>
                     {t('transactionsPage.filters.amountMax')}
                   </span>
                   <input
                     aria-label={t('transactionsPage.filters.amountMax')}
-                    className="h-11 w-full rounded-xl border border-outline/20 bg-white px-3 text-sm"
+                    className={FIELD_CLASS}
                     inputMode="decimal"
                     min="0"
                     placeholder="9999"
@@ -1463,15 +1496,15 @@ export function TransactionsPage() {
             </article>
 
             {filteredListTransactions.length > 0 ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-outline/15 bg-white px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 px-1">
                 <div>
-                  <p className="text-sm font-bold text-on-surface">
+                  <p className="text-sm font-semibold tabular-nums text-ink">
                     {t('transactionsPage.bulk.visibleCount', { count: filteredListTransactions.length })}
                   </p>
-                  <p className="text-xs text-on-surface-variant">{t('transactionsPage.bulk.selectHint')}</p>
+                  <p className="text-xs text-ink-secondary">{t('transactionsPage.bulk.selectHint')}</p>
                 </div>
                 <Button
-                  className="px-3 py-2 text-xs"
+                  className="min-h-11 px-3 py-2 text-[13px] md:min-h-9"
                   variant="secondary"
                   onClick={allVisibleTransactionsSelected ? handleClearTransactionSelection : handleSelectAllVisibleTransactions}
                 >
@@ -1483,30 +1516,30 @@ export function TransactionsPage() {
             ) : null}
 
             {transactionMessage ? (
-              <div role="status" className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+              <div role="status" className="rounded-lg border border-income-edge bg-income-tint px-4 py-3 text-sm font-semibold text-income">
                 {transactionMessage}
               </div>
             ) : null}
 
             {selectedTransactions.length > 0 || bulkMessage ? (
-              <article className="rounded-2xl border border-primary/20 bg-primary-fixed p-4">
+              <article className="rounded-lg border border-action/20 bg-action-tint p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-extrabold text-primary">
+                    <p className="text-sm font-bold text-action">
                       {selectedTransactions.length > 0
                         ? t('transactionsPage.bulk.selected', { count: selectedTransactions.length })
                         : bulkMessage}
                     </p>
                     {selectedTransactions.length > 0 && bulkMessage ? (
-                      <p className="mt-1 text-xs font-semibold text-primary">{bulkMessage}</p>
+                      <p className="mt-1 text-xs font-semibold text-action">{bulkMessage}</p>
                     ) : null}
-                    <p className="mt-1 text-xs text-on-surface-variant">{t('transactionsPage.bulk.description')}</p>
+                    <p className="mt-1 text-xs text-ink-secondary">{t('transactionsPage.bulk.description')}</p>
                   </div>
                   {selectedTransactions.length > 0 ? (
                     <div className="flex flex-wrap items-center gap-2">
                       <select
                         aria-label={t('transactionsPage.bulk.category')}
-                        className="h-10 rounded-xl border border-primary/20 bg-white px-3 text-sm"
+                        className={`${FIELD_CLASS} w-auto md:h-9`}
                         value={bulkCategoryId}
                         onChange={(event) => setBulkCategoryId(event.target.value)}
                       >
@@ -1517,13 +1550,13 @@ export function TransactionsPage() {
                           </option>
                         ))}
                       </select>
-                      <Button className="px-3 py-2 text-xs" onClick={() => void handleBulkApplyCategory()} disabled={!bulkCategoryId || updateTransactionMutation.isPending}>
+                      <Button className="min-h-11 px-3 py-2 text-[13px] md:min-h-9" onClick={() => void handleBulkApplyCategory()} disabled={!bulkCategoryId || updateTransactionMutation.isPending}>
                         {t('transactionsPage.bulk.applyCategory')}
                       </Button>
-                      <Button className="px-3 py-2 text-xs" variant="secondary" onClick={handleBulkMarkReviewed}>
+                      <Button className="min-h-11 px-3 py-2 text-[13px] md:min-h-9" variant="secondary" onClick={handleBulkMarkReviewed}>
                         {t('transactionsPage.bulk.markReviewed')}
                       </Button>
-                      <Button className="px-3 py-2 text-xs" variant="secondary" onClick={() => void handleBulkDelete()} disabled={deleteTransactionMutation.isPending}>
+                      <Button className="min-h-11 px-3 py-2 text-[13px] md:min-h-9" variant="secondary" onClick={() => void handleBulkDelete()} disabled={deleteTransactionMutation.isPending}>
                         {t('transactionsPage.bulk.delete')}
                       </Button>
                     </div>
@@ -1535,42 +1568,42 @@ export function TransactionsPage() {
             {filteredListTransactions.length > 0 ? (
               <article
                 data-testid="desktop-transaction-table"
-                className="hidden overflow-x-auto rounded-2xl border border-outline/15 bg-white min-[1000px]:block"
+                className="hidden overflow-x-auto rounded-lg border border-black/10 bg-white min-[1000px]:block"
               >
-                <div className="grid min-w-[980px] grid-cols-[44px_1.6fr_1fr_1fr_1fr_0.75fr_1fr_0.55fr] bg-surface-container-low px-5 py-3 text-[10px] font-bold uppercase tracking-[0.08em] text-on-surface-variant">
-                  <p>{t('transactionsPage.table.select')}</p>
-                  <p>{t('transactionsPage.table.transactionCategory')}</p>
+                <div className="grid min-w-[920px] grid-cols-[28px_minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,0.9fr)_84px_minmax(0,1fr)_124px] gap-4 bg-ground/60 px-5 py-2.5 text-xs font-semibold text-ink-tertiary">
+                  <p className="sr-only">{t('transactionsPage.table.select')}</p>
+                  <p className="col-start-2">{t('transactionsPage.table.transactionCategory')}</p>
                   <p>{t('transactionsPage.table.accountLedger')}</p>
                   <p>{t('transactionsPage.table.dateTime')}</p>
-                  <p>{t('transactionsPage.table.note')}</p>
-                  <p>{t('transactionsPage.table.tags')}</p>
+                  <p>{t('transaction.type')}</p>
                   <p className="text-right">{t('transactionsPage.table.amount')}</p>
                   <p className="text-right">{t('transactionsPage.table.action')}</p>
                 </div>
                 {filteredListTransactions.map((tx) => {
                   const reviewReasonKeys = backendReviewReasonById.get(tx.id) ?? getReviewReasonKeys(tx, duplicateTransactionIds)
                   return (
-                    <div key={tx.id} className="grid min-w-[980px] grid-cols-[44px_1.6fr_1fr_1fr_1fr_0.75fr_1fr_0.55fr] items-center gap-3 border-t border-outline/10 px-5 py-4">
+                    <div key={tx.id} className="grid min-w-[920px] grid-cols-[28px_minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,0.9fr)_84px_minmax(0,1fr)_124px] gap-4 items-center border-t border-black/10 px-5 py-3.5 transition-colors hover:bg-ground/50 motion-reduce:transition-none">
                       <div>
                         <input
                           type="checkbox"
                           aria-label={t('transactionsPage.table.selectLabel', { name: tx.category_name || tx.memo?.trim() || tx.id })}
-                          className="h-4 w-4 rounded border-outline/30 text-primary"
+                          className="h-[18px] w-[18px] cursor-pointer accent-action"
                           checked={selectedTransactionIds.has(tx.id)}
                           onChange={(event) => toggleSelectedTransaction(tx.id, event.target.checked)}
                         />
                       </div>
                       <div>
-                        <p className="font-semibold text-on-surface">{tx.category_name ?? t('transactionsPage.quickFilters.uncategorized')}</p>
-                        <p className="text-xs text-on-surface-variant">
-                          {t('transactionsPage.table.memoLabel')}{tx.memo?.trim() || t('transactionsPage.table.noMemo')}
+                        <p className="font-semibold text-ink">{tx.category_name ?? t('transactionsPage.quickFilters.uncategorized')}</p>
+                        <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-ink-secondary">
+                          <span className="text-ink-tertiary">{t('transactionsPage.table.memoLabel')}</span>
+                          <span>{tx.memo?.trim() || t('transactionsPage.table.noMemo')}</span>
                         </p>
                         {reviewReasonKeys.length > 0 ? (
                           <div className="mt-2 flex flex-wrap gap-1.5">
                             {reviewReasonKeys.map((reason) => (
                               <span
                                 key={reason}
-                                className="rounded-full border border-primary/15 bg-primary-fixed px-2 py-1 text-[10px] font-bold uppercase text-primary"
+                                className="rounded-full bg-action-tint px-2 py-0.5 text-[11px] font-semibold leading-4 text-action"
                               >
                                 {t(`transactionsPage.reviewReasons.${reason}`)}
                               </span>
@@ -1579,32 +1612,24 @@ export function TransactionsPage() {
                         ) : null}
                       </div>
                       <div>
-                        <p className="text-sm text-on-surface">
+                        <p className="truncate text-sm text-ink">
                           {getTransactionAccountLabel(tx, accountNameById, t('transactionsPage.table.noAccount'))}
                         </p>
-                        <p className="text-xs uppercase text-on-surface-variant">
+                        <p className="truncate text-xs text-ink-tertiary">
                           {getTransactionLedgerLabel(tx, ledgerNameById, t('transactionsPage.table.noLedger'))}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-on-surface">{new Date(tx.occurred_at).toLocaleDateString(locale)}</p>
-                        <p className="text-xs text-on-surface-variant">{new Date(tx.occurred_at).toLocaleTimeString(locale)}</p>
+                        <p className="text-sm tabular-nums text-ink">{new Date(tx.occurred_at).toLocaleDateString(locale)}</p>
+                        <p className="text-xs tabular-nums text-ink-tertiary">{new Date(tx.occurred_at).toLocaleTimeString(locale)}</p>
                       </div>
                       <div>
-                        <p className="text-xs font-semibold uppercase text-on-surface">
-                          {tx.type === 'income' ? t('transaction.typeIncome') : tx.type === 'expense' ? t('transaction.typeExpense') : t('transaction.typeTransfer')}
-                        </p>
-                        <p className="mt-1 text-xs text-on-surface-variant">
-                          {tx.memo?.trim() || (tx.type === 'income' ? t('transactionsPage.table.incomingFlow') : tx.type === 'expense' ? t('transactionsPage.table.outgoingPayment') : t('transactionsPage.table.internalTransfer'))}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="rounded-full bg-surface-container-low px-2 py-1 text-[10px] font-semibold uppercase text-on-surface-variant">
-                          {tx.type === 'income' ? t('transaction.typeIncome') : tx.type === 'expense' ? t('transaction.typeExpense') : t('transaction.typeTransfer')}
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold leading-4 ${TYPE_CHIP_CLASS[tx.type]}`}>
+                          {getTransactionTypeLabel(tx.type)}
                         </span>
                       </div>
-                      <p className={`text-right text-3xl font-extrabold ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        {formatCurrency(Math.abs(tx.amount))}
+                      <p className={`text-right font-headline text-xl font-bold tabular-nums ${AMOUNT_TONE_CLASS[tx.type]}`}>
+                        {formatSignedAmount(tx.type, tx.amount)}
                       </p>
                       <div className="flex justify-end gap-2">
                         {reviewReasonKeys.length > 0 ? (
@@ -1612,29 +1637,29 @@ export function TransactionsPage() {
                             <button
                               type="button"
                               aria-label={t('transactionsPage.table.openDayLabel', { name: tx.memo?.trim() || tx.category_name || tx.id })}
-                              className="grid h-9 w-9 place-items-center rounded-lg border border-outline/15 text-on-surface-variant transition hover:border-primary/30 hover:bg-primary-fixed hover:text-primary"
+                              className={ICON_BUTTON_CLASS}
                               onClick={() => handleOpenTransactionDay(tx)}
                             >
-                              <CalendarDays className="h-4 w-4" />
+                              <CalendarDays aria-hidden="true" className="h-4 w-4" />
                             </button>
                             <button
                               type="button"
                               aria-label={t('transactionsPage.table.markReviewedLabel', { name: tx.memo?.trim() || tx.category_name || tx.id })}
-                              className="grid h-9 w-9 place-items-center rounded-lg border border-outline/15 text-on-surface-variant transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                              className={`${ICON_BUTTON_CLASS} hover:!bg-income-tint hover:!text-income`}
                               onClick={() => handleDismissReview(tx)}
                             >
-                              <CheckCircle2 className="h-4 w-4" />
+                              <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
                             </button>
                           </>
                         ) : null}
                         <button
                           type="button"
                           aria-label={t('transactionsPage.table.deleteLabel', { name: tx.memo?.trim() || tx.category_name || tx.id })}
-                          className="grid h-9 w-9 place-items-center rounded-lg border border-outline/15 text-on-surface-variant transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-50"
+                          className={`${ICON_BUTTON_CLASS} hover:!bg-expense-tint hover:!text-expense`}
                           onClick={() => void handleDeleteTransaction(tx)}
                           disabled={deleteTransactionMutation.isPending}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 aria-hidden="true" className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
@@ -1642,23 +1667,23 @@ export function TransactionsPage() {
                 })}
               </article>
             ) : (
-              <article className="rounded-2xl border border-outline/15 bg-white px-5 py-8 text-center text-sm text-on-surface-variant">
-                <p>{t('transactionsPage.empty.noMatching')}</p>
+              <article className="rounded-lg border border-black/10 bg-white px-5 py-10 text-center text-sm text-ink-secondary">
+                <p className="font-semibold text-ink">{t('transactionsPage.empty.noMatching')}</p>
                 {isInitialEmptyState ? (
                   <>
                     <p className="mt-2">{t('transactionsPage.empty.initial')}</p>
                     <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                      <Button className="px-3 py-1.5 text-xs" onClick={() => setShowAddDialog(true)}>
+                      <Button className="min-h-11 px-4" onClick={() => setShowAddDialog(true)}>
                         {t('transactionsPage.empty.createFirst')}
                       </Button>
-                      <Button className="px-3 py-1.5 text-xs" variant="secondary" onClick={() => navigate('/shortcut')}>
+                      <Button className="min-h-11 px-4" variant="secondary" onClick={() => navigate('/shortcut')}>
                         {t('transactionsPage.empty.openQuickEntry')}
                       </Button>
                     </div>
                   </>
                 ) : (
                   <div className="mt-4 flex justify-center">
-                    <Button className="px-3 py-1.5 text-xs" variant="secondary" onClick={handleClearListFilters}>
+                    <Button className="min-h-11 px-4" variant="secondary" onClick={handleClearListFilters}>
                       {t('transactionsPage.empty.clearFilters')}
                     </Button>
                   </div>
@@ -1666,125 +1691,131 @@ export function TransactionsPage() {
               </article>
             )}
             {isMobileListLayout && filteredListTransactions.length > 0 ? (
-              <div data-testid="mobile-transaction-cards" className="space-y-3 min-[1000px]:hidden">
+              <ul data-testid="mobile-transaction-cards" className="divide-y divide-black/10 overflow-hidden rounded-lg border border-black/10 bg-white min-[1000px]:hidden">
                 {filteredListTransactions.map((tx) => {
                   const reviewReasonKeys = backendReviewReasonById.get(tx.id) ?? getReviewReasonKeys(tx, duplicateTransactionIds)
                   return (
-                    <article key={tx.id} className="rounded-2xl border border-outline/15 bg-white p-4">
-                      <label className="mb-3 inline-flex items-center gap-2 text-xs font-bold text-on-surface-variant">
+                    <li key={tx.id} className="flex gap-1 py-3 pl-1 pr-4">
+                      <label className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center">
                         <input
                           type="checkbox"
                           aria-label={t('transactionsPage.table.selectLabel', { name: tx.category_name || tx.memo?.trim() || tx.id })}
-                          className="h-4 w-4 rounded border-outline/30 text-primary"
+                          className="h-[18px] w-[18px] cursor-pointer accent-action"
                           checked={selectedTransactionIds.has(tx.id)}
                           onChange={(event) => toggleSelectedTransaction(tx.id, event.target.checked)}
                         />
-                        {t('transactionsPage.table.select')}
                       </label>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-base font-bold text-on-surface">
-                            {tx.category_name ?? t('transactionsPage.quickFilters.uncategorized')}
-                          </p>
-                          <p className="mt-1 truncate text-xs text-on-surface-variant">
-                            {tx.memo?.trim() || t('transactionsPage.table.noMemo')}
+                      <div className="min-w-0 flex-1 pt-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-[15px] font-semibold leading-5 text-ink">
+                              {tx.category_name ?? t('transactionsPage.quickFilters.uncategorized')}
+                            </p>
+                            <p className="mt-0.5 truncate text-[13px] leading-5 text-ink-secondary">
+                              {tx.memo?.trim() || t('transactionsPage.table.noMemo')}
+                            </p>
+                          </div>
+                          <p className={`shrink-0 text-[17px] font-bold leading-5 tabular-nums ${AMOUNT_TONE_CLASS[tx.type]}`}>
+                            {formatSignedAmount(tx.type, tx.amount)}
                           </p>
                         </div>
-                        <p className={`shrink-0 text-2xl font-extrabold ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                          {tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : ''}
-                          {formatCurrency(Math.abs(tx.amount))}
+                        <p className="mt-1 text-xs leading-5 text-ink-tertiary">
+                          {getTransactionTypeLabel(tx.type)} · {getTransactionAccountLabel(tx, accountNameById, t('transactionsPage.table.noAccount'))} ·{' '}
+                          <span className="tabular-nums">{new Date(tx.occurred_at).toLocaleString(locale)}</span>
                         </p>
-                      </div>
-                      <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-on-surface-variant">
-                        <p>
-                          <span className="font-bold text-on-surface">{t('transactionsPage.table.accountLedger')}</span>
-                          <br />
-                          {getTransactionAccountLabel(tx, accountNameById, t('transactionsPage.table.noAccount'))}
-                        </p>
-                        <p className="text-right">
-                          <span className="font-bold text-on-surface">{t('transactionsPage.table.dateTime')}</span>
-                          <br />
-                          {new Date(tx.occurred_at).toLocaleString(locale)}
-                        </p>
-                      </div>
-                      {reviewReasonKeys.length > 0 ? (
-                        <div className="mt-3 flex flex-wrap gap-1.5">
-                          {reviewReasonKeys.map((reason) => (
-                            <span
-                              key={reason}
-                              className="rounded-full border border-primary/15 bg-primary-fixed px-2 py-1 text-[10px] font-bold uppercase text-primary"
-                            >
-                              {t(`transactionsPage.reviewReasons.${reason}`)}
-                            </span>
-                          ))}
-                        </div>
-                      ) : null}
-                      <div className="mt-4 flex justify-end gap-2">
                         {reviewReasonKeys.length > 0 ? (
-                          <>
-                            <Button className="px-3 py-1.5 text-xs" variant="secondary" onClick={() => handleOpenTransactionDay(tx)}>
-                              <CalendarDays className="h-4 w-4" />
-                              {t('transactionsPage.table.openDay')}
-                            </Button>
-                            <Button className="px-3 py-1.5 text-xs" variant="secondary" onClick={() => handleDismissReview(tx)}>
-                              <CheckCircle2 className="h-4 w-4" />
-                              {t('transactionsPage.table.markReviewed')}
-                            </Button>
-                          </>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {reviewReasonKeys.map((reason) => (
+                              <span
+                                key={reason}
+                                className="rounded-full bg-action-tint px-2 py-0.5 text-[11px] font-semibold leading-4 text-action"
+                              >
+                                {t(`transactionsPage.reviewReasons.${reason}`)}
+                              </span>
+                            ))}
+                          </div>
                         ) : null}
-                        <button
-                          type="button"
-                          aria-label={t('transactionsPage.table.deleteLabel', { name: tx.memo?.trim() || tx.category_name || tx.id })}
-                          className="grid h-9 w-9 place-items-center rounded-lg border border-outline/15 text-on-surface-variant transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-50"
-                          onClick={() => void handleDeleteTransaction(tx)}
-                          disabled={deleteTransactionMutation.isPending}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <div className="mt-2 flex flex-wrap items-center justify-end gap-1.5">
+                          {reviewReasonKeys.length > 0 ? (
+                            <>
+                              <Button className="min-h-11 gap-1.5 px-2.5 py-1.5 text-[13px]" variant="secondary" onClick={() => handleOpenTransactionDay(tx)}>
+                                <CalendarDays aria-hidden="true" className="h-4 w-4" />
+                                {t('transactionsPage.table.openDay')}
+                              </Button>
+                              <Button className="min-h-11 gap-1.5 px-2.5 py-1.5 text-[13px]" variant="secondary" onClick={() => handleDismissReview(tx)}>
+                                <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
+                                {t('transactionsPage.table.markReviewed')}
+                              </Button>
+                            </>
+                          ) : null}
+                          <button
+                            type="button"
+                            aria-label={t('transactionsPage.table.deleteLabel', { name: tx.memo?.trim() || tx.category_name || tx.id })}
+                            className={`${ICON_BUTTON_CLASS} h-11 w-11 hover:!bg-expense-tint hover:!text-expense`}
+                            onClick={() => void handleDeleteTransaction(tx)}
+                            disabled={deleteTransactionMutation.isPending}
+                          >
+                            <Trash2 aria-hidden="true" className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
-                    </article>
+                    </li>
                   )
                 })}
-              </div>
+              </ul>
             ) : null}
             {pendingUndo ? (
-              <div className="fixed bottom-6 left-1/2 z-30 flex w-[min(520px,calc(100vw-32px))] -translate-x-1/2 items-center justify-between gap-4 rounded-2xl border border-primary/20 bg-primary px-5 py-4 text-white shadow-ambient">
-                <div>
-                  <p className="text-sm font-bold">{t('transactionsPage.undo.deleted')}</p>
-                  <p className="text-xs text-primary-fixed">{pendingUndo.category_name ?? pendingUndo.id}</p>
+              <div className="fixed bottom-[calc(5rem+var(--safe-area-bottom))] left-1/2 z-30 flex w-[min(520px,calc(100vw-32px))] -translate-x-1/2 items-center justify-between gap-4 rounded-xl bg-ink px-5 py-3.5 text-white shadow-ambient min-[1000px]:bottom-6">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">{t('transactionsPage.undo.deleted')}</p>
+                  <p className="truncate text-xs text-white/75">{pendingUndo.category_name ?? pendingUndo.id}</p>
                 </div>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-primary transition hover:bg-primary-fixed disabled:opacity-60"
+                  className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg bg-white px-4 text-sm font-semibold text-ink transition hover:bg-ground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-60 motion-reduce:transition-none"
                   onClick={() => void handleUndoDelete()}
                   disabled={createTransactionMutation.isPending}
                 >
-                  <Undo2 className="h-4 w-4" />
+                  <Undo2 aria-hidden="true" className="h-4 w-4" />
                   {t('transactionsPage.undo.undo')}
                 </button>
               </div>
             ) : null}
           </div>
         ) : (
-          <div className="mt-6 grid gap-4 xl:grid-cols-[1.5fr_0.85fr]">
-            <article className="rounded-2xl border border-outline/15 bg-white p-5">
-              <div className="mb-4 flex items-center gap-3">
-                <button type="button" onClick={() => setActiveMonth(new Date(activeMonth.getFullYear(), activeMonth.getMonth() - 1, 1))}>
-                  <ChevronLeft className="h-4 w-4 text-primary" />
+          <div className="mt-5 grid gap-4 xl:grid-cols-[1.5fr_0.85fr]">
+            <article className="rounded-lg border border-black/10 bg-white p-3 md:p-5">
+              <div className="mb-3 flex items-center gap-1 md:mb-4">
+                <button
+                  type="button"
+                  aria-label={t('transactionsPage.calendar.previousMonth')}
+                  className={`grid h-11 w-11 place-items-center rounded-full text-action transition hover:bg-action-tint motion-reduce:transition-none ${FOCUS_RING_CLASS}`}
+                  onClick={() => setActiveMonth(new Date(activeMonth.getFullYear(), activeMonth.getMonth() - 1, 1))}
+                >
+                  <ChevronLeft aria-hidden="true" className="h-5 w-5" />
                 </button>
-                <h3 className="font-headline text-4xl font-bold text-on-surface">
+                <h3 aria-live="polite" className="px-1 font-headline text-xl font-bold tabular-nums text-ink md:text-2xl">
                   {activeMonth.toLocaleString(locale, { month: 'long', year: 'numeric' })}
                 </h3>
-                <button type="button" onClick={() => setActiveMonth(new Date(activeMonth.getFullYear(), activeMonth.getMonth() + 1, 1))}>
-                  <ChevronRight className="h-4 w-4 text-primary" />
+                <button
+                  type="button"
+                  aria-label={t('transactionsPage.calendar.nextMonth')}
+                  className={`grid h-11 w-11 place-items-center rounded-full text-action transition hover:bg-action-tint motion-reduce:transition-none ${FOCUS_RING_CLASS}`}
+                  onClick={() => setActiveMonth(new Date(activeMonth.getFullYear(), activeMonth.getMonth() + 1, 1))}
+                >
+                  <ChevronRight aria-hidden="true" className="h-5 w-5" />
                 </button>
-                <button type="button" className="ml-2 text-xs font-semibold text-primary" onClick={() => setActiveMonth(new Date())}>
+                <button
+                  type="button"
+                  className={`ml-auto min-h-11 rounded-lg px-3 text-[13px] font-semibold text-action transition hover:bg-action-tint motion-reduce:transition-none ${FOCUS_RING_CLASS}`}
+                  onClick={() => setActiveMonth(new Date())}
+                >
                   {t('transactionsPage.calendar.today')}
                 </button>
               </div>
-              <div className="grid grid-cols-7 border border-outline/15">
+              <div className="grid grid-cols-7 overflow-hidden rounded-lg border border-black/10">
                 {weekdayLabels.map((d) => (
-                  <div key={d} className="border-b border-outline/10 bg-surface-container-low p-2 text-center text-[10px] font-bold uppercase tracking-[0.12em] text-on-surface-variant">
+                  <div key={d} className="border-b border-black/10 bg-ground py-2 text-center text-xs font-semibold text-ink-tertiary">
                     {d}
                   </div>
                 ))}
@@ -1805,16 +1836,27 @@ export function TransactionsPage() {
                     <button
                       key={key}
                       type="button"
-                      className={`min-h-[112px] border border-outline/10 p-2 text-left transition ${
-                        selected ? 'bg-blue-50 ring-1 ring-primary' : inMonth ? 'bg-white hover:bg-surface-container-low' : 'bg-surface-container-low'
+                      aria-pressed={selected}
+                      className={`min-h-[68px] min-w-0 border-b border-r border-black/5 p-1 text-left transition motion-reduce:transition-none focus-visible:relative focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-action md:min-h-[112px] md:p-2 ${
+                        selected ? 'bg-action-tint ring-1 ring-inset ring-action' : inMonth ? 'bg-white hover:bg-ground' : 'bg-ground/60'
                       }`}
                       onClick={() => setSelectedDay(key)}
                     >
-                      <p className={`text-xs font-semibold ${inMonth ? 'text-on-surface' : 'text-on-surface-variant'}`}>{cell.getDate()}</p>
-                      <div className="mt-1 space-y-1">
-                        {totals.out > 0 ? <p className="rounded bg-rose-100 px-1 py-0.5 text-[10px] font-semibold text-rose-700">-{formatCurrency(totals.out)}</p> : null}
-                        {totals.in > 0 ? <p className="rounded bg-emerald-100 px-1 py-0.5 text-[10px] font-semibold text-emerald-700">+{formatCurrency(totals.in)}</p> : null}
+                      <p className={`text-xs font-semibold tabular-nums ${selected ? 'text-action' : inMonth ? 'text-ink' : 'text-ink-tertiary'}`}>{cell.getDate()}</p>
+                      <div className="mt-1 hidden space-y-0.5 md:block">
+                        {totals.out > 0 ? <p className="truncate rounded-sm bg-expense-tint px-1 py-0.5 text-[10px] font-semibold tabular-nums text-expense">-{formatCurrency(totals.out)}</p> : null}
+                        {totals.in > 0 ? <p className="truncate rounded-sm bg-income-tint px-1 py-0.5 text-[10px] font-semibold tabular-nums text-income">+{formatCurrency(totals.in)}</p> : null}
                       </div>
+                      {totals.out > 0 || totals.in > 0 ? (
+                        <div className="mt-1.5 flex gap-1 md:hidden">
+                          {totals.out > 0 ? <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-expense" /> : null}
+                          {totals.in > 0 ? <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-income" /> : null}
+                          <span className="sr-only">
+                            {totals.out > 0 ? `-${formatCurrency(totals.out)} ` : ''}
+                            {totals.in > 0 ? `+${formatCurrency(totals.in)}` : ''}
+                          </span>
+                        </div>
+                      ) : null}
                     </button>
                   )
                 })}
@@ -1822,60 +1864,59 @@ export function TransactionsPage() {
             </article>
 
             <div className="space-y-4">
-              <article className="rounded-2xl border border-primary/45 bg-white p-5">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
+              <article className="rounded-lg border border-black/10 bg-white p-4 md:p-5">
+                <p className={FIELD_LABEL_CLASS}>
                   {t('transactionsPage.calendar.dailySummary')}
                 </p>
-                <h4 className="mt-2 font-headline text-5xl font-bold text-on-surface">
-                  {new Date(effectiveSelectedDay).toLocaleDateString(locale)}
+                <h4 className="mt-1 font-headline text-2xl font-bold tabular-nums text-ink">
+                  {fromLocalDateKey(effectiveSelectedDay).toLocaleDateString(locale)}
                 </h4>
                 <div className="mt-4 grid grid-cols-2 gap-3">
-                  <div className="rounded-xl bg-surface-container-low p-3">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-on-surface-variant">
+                  <div className="rounded-lg bg-ground p-3">
+                    <p className={FIELD_LABEL_CLASS}>
                       {t('transactionsPage.calendar.totalOut')}
                     </p>
-                    <p className="mt-2 font-headline text-4xl font-extrabold text-rose-700">-{formatCurrency(selectedTotals.out)}</p>
+                    <p className="mt-1.5 font-headline text-2xl font-bold tabular-nums text-expense">-{formatCurrency(selectedTotals.out)}</p>
                   </div>
-                  <div className="rounded-xl bg-surface-container-low p-3">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-on-surface-variant">
+                  <div className="rounded-lg bg-ground p-3">
+                    <p className={FIELD_LABEL_CLASS}>
                       {t('transactionsPage.calendar.totalIn')}
                     </p>
-                    <p className="mt-2 font-headline text-4xl font-extrabold text-emerald-700">+{formatCurrency(selectedTotals.in)}</p>
+                    <p className="mt-1.5 font-headline text-2xl font-bold tabular-nums text-income">+{formatCurrency(selectedTotals.in)}</p>
                   </div>
                 </div>
                 <div className="mt-5 space-y-3">
                   {selectedDayTx.slice(0, 6).map((tx) => (
-                    <div key={tx.id} className="rounded-xl bg-surface-container-low p-3">
-                      <div className="flex items-center justify-between">
-                        <p className="font-semibold text-on-surface">{tx.category_name ?? t('transactionsPage.quickFilters.uncategorized')}</p>
-                        <p className={tx.type === 'income' ? 'font-bold text-emerald-700' : 'font-bold text-rose-700'}>
-                          {tx.type === 'income' ? '+' : '-'}
-                          {formatCurrency(Math.abs(tx.amount))}
+                    <div key={tx.id} className="rounded-lg bg-ground p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="min-w-0 truncate font-semibold text-ink">{tx.category_name ?? t('transactionsPage.quickFilters.uncategorized')}</p>
+                        <p className={`shrink-0 font-bold tabular-nums ${AMOUNT_TONE_CLASS[tx.type]}`}>
+                          {formatSignedAmount(tx.type, tx.amount)}
                         </p>
                       </div>
-                      <p className="mt-1 text-xs text-on-surface-variant">
+                      <p className="mt-1 truncate text-xs text-ink-secondary">
                         {tx.memo?.trim() || (tx.type === 'income' ? t('transaction.typeIncome') : tx.type === 'expense' ? t('transaction.typeExpense') : t('transaction.typeTransfer'))}
                       </p>
                     </div>
                   ))}
-                  {selectedDayTx.length === 0 ? <p className="text-sm text-on-surface-variant">{t('transactionsPage.calendar.noTransactions')}</p> : null}
+                  {selectedDayTx.length === 0 ? <p className="text-sm text-ink-secondary">{t('transactionsPage.calendar.noTransactions')}</p> : null}
                 </div>
               </article>
-              <article className="rounded-2xl bg-primary p-5 text-white">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-primary-fixed">{t('transactionsPage.calendar.monthSummary')}</p>
+              <article className="rounded-lg bg-action p-4 text-white md:p-5">
+                <p className="text-[13px] font-semibold">{t('transactionsPage.calendar.monthSummary')}</p>
                 <div className="mt-3 grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-primary-fixed">{t('transactionsPage.calendar.income')}</p>
-                    <p className="font-headline text-3xl font-extrabold">+{formatCurrency(monthTotals.in)}</p>
+                    <p className="text-xs font-medium text-white">{t('transactionsPage.calendar.income')}</p>
+                    <p className="mt-0.5 font-headline whitespace-nowrap text-xl font-bold tabular-nums sm:text-2xl">+{formatCurrency(monthTotals.in)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-primary-fixed">{t('transactionsPage.calendar.expense')}</p>
-                    <p className="font-headline text-3xl font-extrabold">-{formatCurrency(monthTotals.out)}</p>
+                    <p className="text-xs font-medium text-white">{t('transactionsPage.calendar.expense')}</p>
+                    <p className="mt-0.5 font-headline whitespace-nowrap text-xl font-bold tabular-nums sm:text-2xl">-{formatCurrency(monthTotals.out)}</p>
                   </div>
                 </div>
-                <div className="mt-4 border-t border-white/20 pt-4">
-                  <p className="text-xs text-primary-fixed">{t('transactionsPage.calendar.net')}</p>
-                  <p className="font-headline text-4xl font-extrabold">{formatCurrency(monthTotals.in - monthTotals.out)}</p>
+                <div className="mt-4 border-t border-white/25 pt-4">
+                  <p className="text-xs font-medium text-white">{t('transactionsPage.calendar.net')}</p>
+                  <p className="mt-0.5 whitespace-nowrap font-headline text-[28px] font-bold leading-tight tabular-nums">{formatCurrency(monthTotals.in - monthTotals.out)}</p>
                 </div>
               </article>
             </div>
@@ -1905,20 +1946,20 @@ export function TransactionsPage() {
                 role="status"
                 aria-live="polite"
                 data-testid="import-status-panel"
-                className={`sticky top-0 z-20 rounded-xl border p-3 shadow-sm backdrop-blur ${
+                className={`sticky top-0 z-20 rounded-lg border p-3 shadow-sm backdrop-blur ${
                   importStatusError
                     ? 'border-error/30 bg-error-container/95 text-on-error-container'
                     : importResult?.fail_count
                       ? 'border-amber-200 bg-amber-50/95 text-amber-900'
                       : importResult
                         ? 'border-emerald-200 bg-emerald-50/95 text-emerald-900'
-                        : 'border-primary/20 bg-primary-fixed/95 text-primary'
+                        : 'border-action/20 bg-action-tint/95 text-action'
                 }`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-extrabold">{importStatusTitle}</p>
-                    <p className="mt-1 text-xs font-medium text-on-surface-variant">{importStatusDescription}</p>
+                    <p className="text-sm font-bold">{importStatusTitle}</p>
+                    <p className="mt-1 text-xs font-medium text-ink-secondary">{importStatusDescription}</p>
                   </div>
                   {importResult ? (
                     <p className="text-sm font-bold">
@@ -1936,9 +1977,9 @@ export function TransactionsPage() {
                       aria-valuenow={displayedImportProgressPercent}
                       className="mt-3 h-2 overflow-hidden rounded-full bg-white"
                     >
-                      <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${displayedImportProgressPercent}%` }} />
+                      <div className="h-full rounded-full bg-action transition-all duration-500 motion-reduce:transition-none" style={{ width: `${displayedImportProgressPercent}%` }} />
                     </div>
-                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-on-surface">
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs font-semibold tabular-nums text-ink">
                       <span>{importStatusSummary}</span>
                       <span>{displayedImportProgressPercent}%</span>
                     </div>
@@ -1948,19 +1989,19 @@ export function TransactionsPage() {
             ) : null}
             <label
               htmlFor="csv-file"
-              className="flex min-h-60 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-outline-variant bg-surface-container-low p-8 text-center"
+              className="flex min-h-56 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-black/15 bg-ground p-8 text-center transition hover:border-action/50 focus-within:border-action focus-within:ring-2 focus-within:ring-action/30 motion-reduce:transition-none"
             >
-              <Upload className="h-10 w-10 text-primary" />
-              <p className="mt-4 text-3xl font-semibold text-on-surface">{t('transactionsPage.importDialog.dropTitle')}</p>
-              <p className="mt-2 text-sm text-on-surface-variant">{t('transactionsPage.importDialog.supportedFormats')}</p>
-              <span className="mt-6 rounded-lg border border-primary px-6 py-2 text-sm font-semibold text-primary">{t('transactionsPage.importDialog.selectFiles')}</span>
-              <input id="csv-file" type="file" accept=".csv,text/csv" aria-label={t('transactionsPage.importDialog.csvFileLabel')} className="hidden" onChange={(event) => handleImportFileChange(event.target.files?.[0] ?? null)} />
+              <Upload aria-hidden="true" className="h-9 w-9 text-action" />
+              <p className="mt-4 text-xl font-semibold text-ink">{t('transactionsPage.importDialog.dropTitle')}</p>
+              <p className="mt-2 text-sm text-ink-secondary">{t('transactionsPage.importDialog.supportedFormats')}</p>
+              <span className="mt-6 inline-flex min-h-11 items-center rounded-lg border border-black/10 bg-white px-5 text-sm font-semibold text-action">{t('transactionsPage.importDialog.selectFiles')}</span>
+              <input id="csv-file" type="file" accept=".csv,text/csv" aria-label={t('transactionsPage.importDialog.csvFileLabel')} className="sr-only" onChange={(event) => handleImportFileChange(event.target.files?.[0] ?? null)} />
             </label>
             {importFile && !importPreviewMutation.data ? (
-              <p className="text-sm text-on-surface">{t('transactionsPage.importDialog.selected', { name: importFile.name })}</p>
+              <p className="text-sm text-ink">{t('transactionsPage.importDialog.selected', { name: importFile.name })}</p>
             ) : null}
             {importPreviewMutation.isError ? (
-              <div className="rounded-xl border border-error bg-error-container p-4">
+              <div className="rounded-lg border border-error/40 bg-error-container p-4">
                 <p className="text-sm text-on-error-container">
                   {t('transactionsPage.importDialog.previewFailed', {
                     message: getFriendlyApiErrorMessage(importPreviewMutation.error, t),
@@ -1969,56 +2010,56 @@ export function TransactionsPage() {
               </div>
             ) : null}
             {importPreviewMutation.data ? (
-              <div className="space-y-4 rounded-xl border border-outline/10 bg-surface-container-low p-4">
+              <div className="space-y-4 rounded-lg border border-black/10 bg-ground p-4">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-on-surface-variant">
+                  <p className={FIELD_LABEL_CLASS}>
                     {t('transactionsPage.importDialog.summaryTitle')}
                   </p>
                   <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                    <div className="rounded-xl bg-white p-3">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-on-surface-variant">
+                    <div className="rounded-lg bg-white p-3">
+                      <p className={FIELD_LABEL_CLASS}>
                         {t('transactionsPage.importDialog.file')}
                       </p>
-                      <p className="mt-1 truncate text-sm font-bold text-on-surface">{importFile?.name ?? '-'}</p>
+                      <p className="mt-1 truncate text-sm font-bold tabular-nums text-ink">{importFile?.name ?? '-'}</p>
                     </div>
-                    <div className="rounded-xl bg-white p-3">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-on-surface-variant">
+                    <div className="rounded-lg bg-white p-3">
+                      <p className={FIELD_LABEL_CLASS}>
                         {t('transactionsPage.importDialog.columns')}
                       </p>
-                      <p className="mt-1 text-sm font-bold text-on-surface">{importPreviewMutation.data.columns.length}</p>
+                      <p className="mt-1 text-sm font-bold tabular-nums text-ink">{importPreviewMutation.data.columns.length}</p>
                     </div>
-                    <div className="rounded-xl bg-white p-3">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-on-surface-variant">
+                    <div className="rounded-lg bg-white p-3">
+                      <p className={FIELD_LABEL_CLASS}>
                         {t('transactionsPage.importDialog.previewRows')}
                       </p>
-                      <p className="mt-1 text-sm font-bold text-on-surface">{importPreviewMutation.data.sample_rows.length}</p>
+                      <p className="mt-1 text-sm font-bold tabular-nums text-ink">{importPreviewMutation.data.sample_rows.length}</p>
                     </div>
                   </div>
-                  <p className="mt-3 rounded-xl border border-primary/15 bg-white px-3 py-2 text-xs font-semibold text-on-surface-variant">
+                  <p className="mt-3 rounded-lg border border-black/10 bg-white px-3 py-2 text-xs font-medium leading-5 text-ink-secondary">
                     {t('transactionsPage.importDialog.dedupeHint')}
                   </p>
                 </div>
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-on-surface-variant">
+                <p className={FIELD_LABEL_CLASS}>
                   {t('transactionsPage.importDialog.detectedColumns')}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {importPreviewMutation.data.columns.map((column) => (
-                    <span key={column} className="rounded-full bg-white px-3 py-1 text-sm text-on-surface">
+                    <span key={column} className="rounded-full bg-white px-3 py-1 text-sm text-ink">
                       {column}
                     </span>
                   ))}
                 </div>
-                <section className="rounded-2xl border border-outline/10 bg-white p-4">
+                <section className="rounded-lg border border-black/10 bg-white p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <h3 className="font-headline text-2xl font-bold leading-tight text-on-surface">
+                      <h3 className="font-headline text-xl font-bold leading-tight text-ink">
                         {t('transactionsPage.importDialog.mappingTitle')}
                       </h3>
-                      <p className="mt-1 text-sm text-on-surface-variant">
+                      <p className="mt-1 text-sm text-ink-secondary">
                         {t('transactionsPage.importDialog.mappingDescription')}
                       </p>
                     </div>
-                    <p className={`rounded-full px-3 py-1 text-xs font-bold ${importMappingReady ? 'bg-primary-fixed text-primary' : 'bg-amber-50 text-amber-700'}`}>
+                    <p className={`rounded-full px-3 py-1 text-xs font-bold ${importMappingReady ? 'bg-action-tint text-action' : 'bg-amber-50 text-amber-800'}`}>
                       {importMappingReady ? t('transactionsPage.importDialog.mappingReady') : t('transactionsPage.importDialog.mappingNeedsFields')}
                     </p>
                   </div>
@@ -2033,10 +2074,10 @@ export function TransactionsPage() {
                       ['ledger', t('transactionsPage.importDialog.ledgerColumn')],
                     ] as Array<[keyof ImportMapping, string]>).map(([slot, label]) => (
                       <label key={slot} className="space-y-2">
-                        <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-on-surface-variant">{label}</span>
+                        <span className={FIELD_LABEL_CLASS}>{label}</span>
                         <select
                           aria-label={label}
-                          className="h-10 w-full rounded-xl border border-outline/20 bg-surface-container-low px-3 text-sm"
+                          className={FIELD_CLASS}
                           value={importMapping[slot]}
                           onChange={(event) => setImportMappingColumn(slot, event.target.value)}
                         >
@@ -2049,13 +2090,13 @@ export function TransactionsPage() {
                         </select>
                       </label>
                     ))}
-                    <label className="space-y-2">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-on-surface-variant">
+                    <label className="space-y-1.5">
+                      <span className={FIELD_LABEL_CLASS}>
                         {t('transactionsPage.importDialog.defaultAccount')}
                       </span>
                       <select
                         aria-label={t('transactionsPage.importDialog.defaultAccount')}
-                        className="h-10 w-full rounded-xl border border-outline/20 bg-surface-container-low px-3 text-sm"
+                        className={FIELD_CLASS}
                         value={importDefaultAccountId}
                         onChange={(event) => setImportDefaultAccountId(event.target.value)}
                       >
@@ -2067,13 +2108,13 @@ export function TransactionsPage() {
                         ))}
                       </select>
                     </label>
-                    <label className="space-y-2">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-on-surface-variant">
+                    <label className="space-y-1.5">
+                      <span className={FIELD_LABEL_CLASS}>
                         {t('transactionsPage.importDialog.defaultLedger')}
                       </span>
                       <select
                         aria-label={t('transactionsPage.importDialog.defaultLedger')}
-                        className="h-10 w-full rounded-xl border border-outline/20 bg-surface-container-low px-3 text-sm"
+                        className={FIELD_CLASS}
                         value={importDefaultLedgerId}
                         onChange={(event) => setImportDefaultLedgerId(event.target.value)}
                       >
@@ -2087,23 +2128,23 @@ export function TransactionsPage() {
                     </label>
                   </div>
                 </section>
-                <section className="rounded-2xl border border-outline/10 bg-white p-4">
+                <section className="rounded-lg border border-black/10 bg-white p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <h3 className="font-headline text-2xl font-bold leading-tight text-on-surface">
+                      <h3 className="font-headline text-xl font-bold leading-tight text-ink">
                         {t('transactionsPage.importDialog.mappedPreviewTitle')}
                       </h3>
-                      <p className="mt-1 text-sm text-on-surface-variant">
+                      <p className="mt-1 text-sm text-ink-secondary">
                         {t('transactionsPage.importDialog.mappedPreviewDescription')}
                       </p>
                     </div>
-                    <p className={`rounded-full px-3 py-1 text-xs font-bold ${importMappingReady ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                    <p className={`rounded-full px-3 py-1 text-xs font-bold ${importMappingReady ? 'bg-income-tint text-income' : 'bg-amber-50 text-amber-800'}`}>
                       {importMappingReady ? t('transactionsPage.importDialog.mappedPreviewReady') : t('transactionsPage.importDialog.mappedPreviewNeedsMapping')}
                     </p>
                   </div>
                   {importMappingReady ? (
-                    <div className="mt-4 overflow-x-auto rounded-xl border border-outline/10">
-                      <div className="grid min-w-[640px] grid-cols-[1.1fr_0.8fr_1.5fr_0.8fr_1fr] bg-surface-container-low px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-on-surface-variant">
+                    <div className="mt-4 overflow-x-auto rounded-lg border border-black/10">
+                      <div className="grid min-w-[640px] grid-cols-[1.1fr_0.8fr_1.5fr_0.8fr_1fr] gap-3 bg-ground px-3 py-2 text-xs font-semibold text-ink-tertiary">
                         <span>{t('transactionsPage.importDialog.previewDate')}</span>
                         <span>{t('transactionsPage.importDialog.previewAmount')}</span>
                         <span>{t('transactionsPage.importDialog.previewMemo')}</span>
@@ -2111,9 +2152,9 @@ export function TransactionsPage() {
                         <span>{t('transactionsPage.importDialog.previewCategory')}</span>
                       </div>
                       {importMappedPreviewRows.map((row, index) => (
-                        <div key={`${row.date}-${row.amount}-${index}`} className="grid min-w-[640px] grid-cols-[1.1fr_0.8fr_1.5fr_0.8fr_1fr] border-t border-outline/10 px-3 py-2 text-sm text-on-surface">
+                        <div key={`${row.date}-${row.amount}-${index}`} className="grid min-w-[640px] grid-cols-[1.1fr_0.8fr_1.5fr_0.8fr_1fr] gap-3 border-t border-black/10 px-3 py-2 text-sm text-ink">
                           <span className="truncate">{row.date || '-'}</span>
-                          <span className="truncate font-semibold">{row.amount || '-'}</span>
+                          <span className="truncate font-semibold tabular-nums">{row.amount || '-'}</span>
                           <span className="truncate">{row.description || '-'}</span>
                           <span className="truncate">{row.type || '-'}</span>
                           <span className="truncate">{row.category || '-'}</span>
@@ -2121,7 +2162,7 @@ export function TransactionsPage() {
                       ))}
                     </div>
                   ) : (
-                    <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
+                    <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
                       {t('transactionsPage.importDialog.missingRequiredMapping')}
                     </p>
                   )}
@@ -2138,68 +2179,68 @@ export function TransactionsPage() {
                     </span>
                   ) : null}
                   {activeImportJob?.status === 'running' ? (
-                    <span className="text-sm text-primary">{t('transactionsPage.importDialog.backgroundRunning')}</span>
+                    <span className="text-sm text-action">{t('transactionsPage.importDialog.backgroundRunning')}</span>
                   ) : null}
                   {importResult ? (
-                    <span className="text-sm text-emerald-600">{t('transactionsPage.importDialog.importSuccessful')}</span>
+                    <span className="text-sm font-semibold text-income">{t('transactionsPage.importDialog.importSuccessful')}</span>
                   ) : null}
                 </div>
                 {importResult ? (
-                  <section className="rounded-2xl border border-outline/15 bg-white p-4">
+                  <section className="rounded-lg border border-black/10 bg-white p-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <h3 className="font-headline text-2xl font-bold leading-tight text-on-surface">
+                        <h3 className="font-headline text-xl font-bold leading-tight text-ink">
                           {t('transactionsPage.importDialog.resultsTitle')}
                         </h3>
-                        <p className="mt-1 text-sm text-on-surface-variant">
+                        <p className="mt-1 text-sm text-ink-secondary">
                           {t('transactionsPage.importDialog.resultsDescription')}
                         </p>
                       </div>
                       {importProblemRows.length > 0 ? (
-                        <Button className="px-3 py-2 text-xs" variant="secondary" onClick={handleDownloadImportProblems}>
-                          <FileDown className="h-4 w-4" />
+                        <Button className="min-h-11 px-3 py-2 text-[13px] md:min-h-9" variant="secondary" onClick={handleDownloadImportProblems}>
+                          <FileDown aria-hidden="true" className="h-4 w-4" />
                           {t('transactionsPage.importDialog.downloadProblems')}
                         </Button>
                       ) : null}
                     </div>
                     <div className="mt-4 grid gap-2 sm:grid-cols-3">
-                      <div className="rounded-xl bg-emerald-50 p-3">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-700">
+                      <div className="rounded-lg bg-income-tint p-3">
+                        <p className="text-[13px] font-semibold text-income">
                           {t('transactionsPage.importDialog.importedLabel')}
                         </p>
-                        <p className="mt-1 text-sm font-extrabold text-emerald-800">
+                        <p className="mt-1 text-sm font-bold tabular-nums text-income">
                           {t('transactionsPage.importDialog.importedCount', { count: importResult.success_count })}
                         </p>
                       </div>
-                      <div className="rounded-xl bg-amber-50 p-3">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-amber-700">
+                      <div className="rounded-lg bg-amber-50 p-3">
+                        <p className="text-[13px] font-semibold text-amber-800">
                           {t('transactionsPage.importDialog.skippedLabel')}
                         </p>
-                        <p className="mt-1 text-sm font-extrabold text-amber-800">
+                        <p className="mt-1 text-sm font-bold tabular-nums text-amber-900">
                           {t('transactionsPage.importDialog.skippedCount', { count: importResult.skip_count })}
                         </p>
                       </div>
-                      <div className="rounded-xl bg-rose-50 p-3">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-rose-700">
+                      <div className="rounded-lg bg-expense-tint p-3">
+                        <p className="text-[13px] font-semibold text-expense">
                           {t('transactionsPage.importDialog.failedLabel')}
                         </p>
-                        <p className="mt-1 text-sm font-extrabold text-rose-800">
+                        <p className="mt-1 text-sm font-bold tabular-nums text-expense">
                           {t('transactionsPage.importDialog.failedCount', { count: importResult.fail_count })}
                         </p>
                       </div>
                     </div>
                     {importProblemRows.length > 0 ? (
-                      <div className="mt-4 max-h-56 overflow-auto rounded-xl border border-outline/10">
+                      <div className="mt-4 max-h-56 overflow-auto overscroll-contain rounded-lg border border-black/10">
                         {importProblemRows.slice(0, 8).map((row) => (
-                          <div key={`${row.row_index}-${row.status}`} className="grid grid-cols-[72px_1fr_1.3fr] gap-3 border-t border-outline/10 px-3 py-2 first:border-t-0">
-                            <p className="text-xs font-bold text-on-surface">{t('transactionsPage.importDialog.rowNumber', { row: row.row_index + 1 })}</p>
-                            <p className="text-xs font-semibold capitalize text-on-surface-variant">{row.status}</p>
-                            <p className="text-xs text-on-surface">{getImportReasonLabel(row.reason)}</p>
+                          <div key={`${row.row_index}-${row.status}`} className="grid grid-cols-[72px_1fr_1.3fr] gap-3 border-t border-black/10 px-3 py-2 first:border-t-0">
+                            <p className="text-xs font-bold tabular-nums text-ink">{t('transactionsPage.importDialog.rowNumber', { row: row.row_index + 1 })}</p>
+                            <p className="text-xs font-semibold capitalize text-ink-secondary">{row.status}</p>
+                            <p className="text-xs text-ink">{getImportReasonLabel(row.reason)}</p>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">
+                      <p className="mt-4 rounded-lg bg-income-tint px-3 py-2 text-sm font-semibold text-income">
                         {t('transactionsPage.importDialog.noProblems')}
                       </p>
                     )}
@@ -2227,9 +2268,12 @@ export function TransactionsPage() {
             </>
           }
         >
-          <form id="add-transaction-form" className="grid gap-5 md:grid-cols-2" onSubmit={(event) => void handleCreateTransaction(event)}>
+          <form id="add-transaction-form" className="grid gap-4 md:grid-cols-2 md:gap-5" onSubmit={(event) => void handleCreateTransaction(event)}>
             <TextField aria-label={t('transaction.amount')} label={t('transaction.amount')} type="number" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0.00" helperText={t('transactionsPage.addDialog.amountHelper')} />
-            <TextField label={t('transaction.dateTime')} type="datetime-local" step="1" value={date} onChange={(event) => setDate(event.target.value)} />
+            <SelectField label={t('transaction.type')} value={transactionType} onChange={(event) => setTransactionType(event.target.value as 'income' | 'expense')}>
+              <option value="expense">{t('transaction.typeExpense')}</option>
+              <option value="income">{t('transaction.typeIncome')}</option>
+            </SelectField>
             <SelectField aria-label={t('transaction.category')} label={t('transaction.category')} value={categoryId} onChange={(event) => setCategoryId(event.target.value)} helperText={t('transactionsPage.addDialog.categoryHelper')}>
               <option value="">{t('transactionsPage.addDialog.selectCategory')}</option>
               {categoryOptionGroups.common.length > 0 ? (
@@ -2265,6 +2309,7 @@ export function TransactionsPage() {
                 </option>
               ))}
             </SelectField>
+            <TextField label={t('transaction.dateTime')} type="datetime-local" step="1" value={date} onChange={(event) => setDate(event.target.value)} />
             <SelectField label={t('transactionsPage.filters.ledger')} defaultValue={ledgers[0]?.id ?? ''} disabled>
               {ledgers.map((ledger) => (
                 <option key={ledger.id} value={ledger.id}>
@@ -2272,23 +2317,36 @@ export function TransactionsPage() {
                 </option>
               ))}
             </SelectField>
-            <TextField label={t('transaction.memo')} value={memo} onChange={(event) => setMemo(event.target.value)} placeholder={t('transactionsPage.addDialog.memoPlaceholder')} />
             <div className="md:col-span-2">
-              <SelectField label={t('transaction.type')} value={transactionType} onChange={(event) => setTransactionType(event.target.value as 'income' | 'expense')}>
-                <option value="expense">{t('transaction.typeExpense')}</option>
-                <option value="income">{t('transaction.typeIncome')}</option>
-              </SelectField>
+              <TextField label={t('transaction.memo')} value={memo} onChange={(event) => setMemo(event.target.value)} placeholder={t('transactionsPage.addDialog.memoPlaceholder')} />
             </div>
-            <div className="md:col-span-2">
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">{t('transactionsPage.table.tags')}</p>
-              <div className="flex flex-wrap gap-2">
-                {tags.slice(0, 6).map((tag) => (
-                  <span key={tag.id} className="rounded-full bg-surface-container-low px-3 py-1 text-sm font-semibold text-primary">
-                    {tag.name}
-                  </span>
-                ))}
-              </div>
-            </div>
+            {tags.length > 0 ? (
+              <fieldset className="md:col-span-2">
+                <legend className={`mb-2 ${FIELD_LABEL_CLASS}`}>{t('transactionsPage.table.tags')}</legend>
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag) => {
+                    const selected = selectedTagIds.includes(tag.id)
+                    return (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        aria-pressed={selected}
+                        className={`min-h-11 rounded-full px-3.5 text-[13px] font-semibold transition motion-reduce:transition-none md:min-h-9 ${FOCUS_RING_CLASS} ${
+                          selected ? 'bg-action text-white' : 'bg-ground text-ink-control hover:bg-segment-track'
+                        }`}
+                        onClick={() =>
+                          setSelectedTagIds((current) =>
+                            current.includes(tag.id) ? current.filter((id) => id !== tag.id) : [...current, tag.id],
+                          )
+                        }
+                      >
+                        {tag.name}
+                      </button>
+                    )
+                  })}
+                </div>
+              </fieldset>
+            ) : null}
           </form>
         </DialogShell>
       ) : null}

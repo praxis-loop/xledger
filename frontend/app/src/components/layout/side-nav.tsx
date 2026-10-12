@@ -7,7 +7,7 @@ import { primaryNavItems } from './nav-items'
 
 function BrandMark() {
   return (
-    <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-white shadow-ambient">
+    <div className="grid h-10 w-10 place-items-center rounded-xl bg-action text-white">
       <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
         <path d="M4 5h6v6H4V5Zm10 0h6v3h-6V5ZM14 10h6v9h-6v-9ZM4 13h6v6H4v-6Z" fill="currentColor" />
       </svg>
@@ -20,13 +20,13 @@ export function SideNav() {
   const { openMobileDevice } = useAccountCenter()
 
   return (
-    <aside className="hidden w-[230px] shrink-0 border-r border-outline/15 bg-surface-container-lowest/95 px-4 py-5 min-[1000px]:sticky min-[1000px]:top-0 min-[1000px]:flex min-[1000px]:h-screen min-[1000px]:flex-col">
+    <aside className="hidden w-[230px] shrink-0 border-r border-black/10 bg-white px-4 py-5 min-[1000px]:sticky min-[1000px]:top-0 min-[1000px]:flex min-[1000px]:h-screen min-[1000px]:flex-col">
       <div className="mb-6 px-2 py-2">
         <div className="flex items-center gap-3">
           <BrandMark />
           <div>
-            <p className="font-headline text-[34px] font-extrabold leading-none text-primary">xledger</p>
-            <p className="font-label text-[10px] font-bold uppercase tracking-[0.08em] text-on-surface-variant">
+            <p className="font-headline text-[30px] font-bold leading-none tracking-tight text-ink">xledger</p>
+            <p className="mt-1 text-[11px] font-medium leading-4 text-ink-tertiary">
               {t('layout.brandTagline')}
             </p>
           </div>
@@ -40,31 +40,25 @@ export function SideNav() {
             to={to}
             className={({ isActive }) =>
               cn(
-                'group flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-semibold text-on-surface-variant transition',
-                isActive
-                  ? 'border-primary/15 bg-white text-primary shadow-sm'
-                  : 'border-transparent hover:border-outline/20 hover:bg-white hover:text-primary',
+                'group flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action motion-reduce:transition-none',
+                isActive ? 'bg-action-tint text-action' : 'text-ink-secondary hover:bg-ground hover:text-ink',
               )
             }
           >
-            <span className="grid h-6 w-6 place-items-center rounded-md bg-surface-container text-on-surface-variant group-hover:bg-primary-fixed group-hover:text-primary">
-              <Icon className="h-3.5 w-3.5" />
-            </span>
-            <span className="font-label text-sm">{t(labelKey)}</span>
+            <Icon aria-hidden="true" className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+            <span>{t(labelKey)}</span>
           </NavLink>
         ))}
       </nav>
 
       <button
         type="button"
-        className="group mt-4 flex items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 text-left text-sm font-semibold text-on-surface-variant transition hover:border-outline/20 hover:bg-white hover:text-primary"
+        className="mt-4 flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-ink-secondary transition hover:bg-ground hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action motion-reduce:transition-none"
         onClick={openMobileDevice}
         aria-label={t('layout.mobileDevice.title')}
       >
-        <span className="grid h-6 w-6 place-items-center rounded-md bg-surface-container text-on-surface-variant group-hover:bg-primary-fixed group-hover:text-primary">
-          <Smartphone className="h-3.5 w-3.5" />
-        </span>
-        <span className="font-label text-sm">{t('layout.mobileDevice.title')}</span>
+        <Smartphone aria-hidden="true" className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+        <span>{t('layout.mobileDevice.title')}</span>
       </button>
     </aside>
   )

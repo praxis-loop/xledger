@@ -432,6 +432,8 @@
       "income": "Income",
       "expense": "Expense",
       "net": "Net",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
       "weekdays": {
         "sun": "Sun",
         "mon": "Mon",
