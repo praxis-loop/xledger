@@ -233,7 +233,7 @@ describe('dashboard and analytics pages', () => {
       )
       expect(screen.getByRole('article', { name: /month income/i })).toHaveAttribute('data-tone', 'positive')
       expect(screen.getByRole('article', { name: /month expense/i })).toHaveAttribute('data-tone', 'negative')
-      expect(screen.getByRole('article', { name: /current balance/i })).toHaveAttribute('data-tone', 'balance')
+      expect(screen.getByRole('article', { name: /total assets/i })).toHaveAttribute('data-tone', 'balance')
       expect(screen.getByText(/tap or hover bars/i)).toBeInTheDocument()
       expect(screen.getByText(/income:/i)).toBeInTheDocument()
       expect(screen.getByText(/expense:/i)).toBeInTheDocument()

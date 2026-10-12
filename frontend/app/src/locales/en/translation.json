@@ -112,7 +112,7 @@
     "subtitle": "Track cashflow in real time and keep your books healthy with clear next steps.",
     "income": "Income",
     "expense": "Expense",
-    "totalAssets": "Current Balance",
+    "totalAssets": "Total assets",
     "totalAssetsHint": "From all active account balances",
     "monthlyOverview": "Monthly Overview",
     "recentTransactions": "Recent Transactions",
