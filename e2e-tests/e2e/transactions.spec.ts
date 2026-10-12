@@ -169,17 +169,18 @@ test('transactions flow: smart views surface items that need review', async ({ p
 
   await openTransactions(page)
   await expect(page.getByRole('heading', { name: 'Smart Views' })).toBeVisible()
-  await expect(page.locator('span', { hasText: /\d+ uncategorized/ }).first()).toBeVisible()
-  await expect(page.locator('span', { hasText: /\d+ possible duplicate/ }).first()).toBeVisible()
-  await expect(page.locator('span', { hasText: /\d+ large transaction/ }).first()).toBeVisible()
+  const smartViews = page.getByRole('region', { name: 'Smart Views' })
+  for (const name of ['Focus uncategorized review', 'Focus duplicate review', 'Focus large review']) {
+    await expect(smartViews.getByRole('button', { name })).toBeVisible()
+  }
 
   await page.getByPlaceholder('Transaction ID, category, or note...').fill(unique)
   await page.getByRole('button', { name: 'Needs Review', exact: true }).click()
   await expect(page.getByText(`${unique} uncategorized`, { exact: true })).toBeVisible()
   await expect(page.getByText(`${unique} large expense`, { exact: true })).toBeVisible()
   await expect(page.getByText(`${unique} duplicate lunch`, { exact: true }).first()).toBeVisible()
-  await expect(page.getByText('Missing category', { exact: true })).toBeVisible()
-  await expect(page.getByText('Large expense', { exact: true })).toBeVisible()
+  await expect(page.getByText('Missing category', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Large expense', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('Possible duplicate', { exact: true }).first()).toBeVisible()
   await expect(page.getByText(`${unique} normal income`, { exact: true })).toBeHidden()
 
