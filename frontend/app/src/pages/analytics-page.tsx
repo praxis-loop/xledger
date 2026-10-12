@@ -6,6 +6,7 @@ import { useCategoryStats, useKeywordStats, useTrendStatsRange } from '@/feature
 import { useTransactionsWithOptions } from '@/features/transactions/transactions-hooks'
 import type { TransactionRecord } from '@/features/transactions/transactions-api'
 import { formatCurrency } from '@/lib/format'
+import { localDateFromBucket } from '@/lib/dates'
 
 type FilterMode = 'month' | 'year'
 
@@ -114,7 +115,7 @@ function buildTrendBuckets(
   }
 
   points.forEach((point) => {
-    const dt = new Date(point.bucket_start)
+    const dt = localDateFromBucket(point.bucket_start)
     const key = mode === 'year' ? String(dt.getMonth()) : String(dt.getDate())
     const bucket = buckets.get(key)
     if (!bucket) return

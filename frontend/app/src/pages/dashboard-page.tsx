@@ -6,6 +6,7 @@ import type { TransactionRecord } from '@/features/transactions/transactions-api
 import { useTransactionsWithOptions } from '@/features/transactions/transactions-hooks'
 import { buildReviewSummary } from '@/features/transactions/review-rules'
 import { formatCurrency } from '@/lib/format'
+import { localDateFromBucket } from '@/lib/dates'
 import { DashboardMetricCard } from '@/components/ui/dashboard-metric-card'
 import { SegmentedControl } from '@/components/ui/segmented-control'
 
@@ -155,7 +156,7 @@ function buildLast12MonthBars(points: Array<{ bucket_start: string; income: numb
   })
 
   points.forEach((point) => {
-    const dt = new Date(point.bucket_start)
+    const dt = localDateFromBucket(point.bucket_start)
     const key = getMonthKey(dt)
     const bucket = map.get(key)
     if (!bucket) return

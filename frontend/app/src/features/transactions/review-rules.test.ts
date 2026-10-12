@@ -19,8 +19,8 @@ describe('transaction review rules', () => {
     const transactions = [
       tx({ id: 'uncategorized', type: 'expense', amount: 12, occurred_at: '2026-05-01T08:00:00Z', memo: 'cash' }),
       tx({ id: 'large', type: 'expense', amount: 1200, occurred_at: '2026-05-01T09:00:00Z', category_name: 'Travel' }),
-      tx({ id: 'dup-a', type: 'expense', amount: 25, occurred_at: '2026-05-02T10:00:00Z', category_name: 'Food', memo: 'Lunch' }),
-      tx({ id: 'dup-b', type: 'expense', amount: 25, occurred_at: '2026-05-02T12:00:00Z', category_name: 'Cafe', memo: 'Lunch' }),
+      tx({ id: 'dup-a', type: 'expense', amount: 25, occurred_at: new Date(2026, 4, 2, 10, 0).toISOString(), category_name: 'Food', memo: 'Lunch' }),
+      tx({ id: 'dup-b', type: 'expense', amount: 25, occurred_at: new Date(2026, 4, 2, 12, 0).toISOString(), category_name: 'Cafe', memo: 'Lunch' }),
       tx({ id: 'income', type: 'income', amount: 5000, occurred_at: '2026-05-02T12:00:00Z', category_name: 'Salary' }),
     ]
 

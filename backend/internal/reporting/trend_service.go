@@ -143,13 +143,14 @@ func advanceTrendBucket(value time.Time, granularity string) time.Time {
 	switch granularity {
 	case "month":
 		return value.AddDate(0, 1, 0)
-	case "day":
-		return value.Add(24 * time.Hour)
 	default:
-		return value.Add(24 * time.Hour)
+		// Calendar day, not 24h: keeps buckets on local midnight across daylight-saving switches.
+		return value.AddDate(0, 0, 1)
 	}
 }
 
+// From/To arrive as instants (RFC3339). Convert them to the user's zone; re-reading their UTC wall
+// clock as local time shifted the bucket grid by the zone offset and added a phantom first or last day.
 func localizeTrendBoundary(value time.Time, loc *time.Location) time.Time {
-	return time.Date(value.Year(), value.Month(), value.Day(), value.Hour(), value.Minute(), value.Second(), value.Nanosecond(), loc)
+	return value.In(loc)
 }
