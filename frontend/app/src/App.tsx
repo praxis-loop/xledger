@@ -28,6 +28,10 @@ const SettingsPage = lazy(async () => {
   const module = await import('@/pages/settings-page')
   return { default: module.SettingsPage }
 })
+const MePage = lazy(async () => {
+  const module = await import('@/pages/me-page')
+  return { default: module.MePage }
+})
 const TransactionsPage = lazy(async () => {
   const module = await import('@/pages/transactions-page')
   return { default: module.TransactionsPage }
@@ -161,6 +165,16 @@ export default function App() {
             <ProtectedLayout>
               <AppShell>
                 <SettingsPage />
+              </AppShell>
+            </ProtectedLayout>
+          }
+        />
+        <Route
+          path="/me"
+          element={
+            <ProtectedLayout>
+              <AppShell>
+                <MePage />
               </AppShell>
             </ProtectedLayout>
           }

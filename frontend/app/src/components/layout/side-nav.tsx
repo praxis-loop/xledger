@@ -1,10 +1,9 @@
-import { NavLink } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
 import { Smartphone } from 'lucide-react'
-import { useState } from 'react'
-import { primaryNavItems } from './nav-items'
-import { MobileDeviceDialog } from './mobile-device-dialog'
+import { useTranslation } from 'react-i18next'
+import { NavLink } from 'react-router-dom'
 import { cn } from '@/lib/utils'
+import { useAccountCenter } from './account-center'
+import { primaryNavItems } from './nav-items'
 
 function BrandMark() {
   return (
@@ -18,59 +17,55 @@ function BrandMark() {
 
 export function SideNav() {
   const { t } = useTranslation()
-  const [mobileDeviceOpen, setMobileDeviceOpen] = useState(false)
+  const { openMobileDevice } = useAccountCenter()
 
   return (
-    <>
-      <aside className="hidden w-[230px] shrink-0 border-r border-outline/15 bg-surface-container-lowest/95 px-4 py-5 min-[1000px]:sticky min-[1000px]:top-0 min-[1000px]:flex min-[1000px]:h-screen min-[1000px]:flex-col">
-        <div className="mb-6 px-2 py-2">
-          <div className="flex items-center gap-3">
-            <BrandMark />
-            <div>
-              <p className="font-headline text-[34px] font-extrabold leading-none text-primary">xledger</p>
-              <p className="font-label text-[10px] font-bold uppercase tracking-[0.08em] text-on-surface-variant">
-                {t('layout.brandTagline')}
-              </p>
-            </div>
+    <aside className="hidden w-[230px] shrink-0 border-r border-outline/15 bg-surface-container-lowest/95 px-4 py-5 min-[1000px]:sticky min-[1000px]:top-0 min-[1000px]:flex min-[1000px]:h-screen min-[1000px]:flex-col">
+      <div className="mb-6 px-2 py-2">
+        <div className="flex items-center gap-3">
+          <BrandMark />
+          <div>
+            <p className="font-headline text-[34px] font-extrabold leading-none text-primary">xledger</p>
+            <p className="font-label text-[10px] font-bold uppercase tracking-[0.08em] text-on-surface-variant">
+              {t('layout.brandTagline')}
+            </p>
           </div>
         </div>
+      </div>
 
-        <nav aria-label={t('layout.primaryNavigation')} className="flex flex-1 flex-col gap-1.5">
-          {primaryNavItems.map(({ to, labelKey, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                cn(
-                  'group flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-semibold text-on-surface-variant transition',
-                  isActive
-                    ? 'border-primary/15 bg-white text-primary shadow-sm'
-                    : 'border-transparent hover:border-outline/20 hover:bg-white hover:text-primary',
-                )
-              }
-            >
-              <span className="grid h-6 w-6 place-items-center rounded-md bg-surface-container text-on-surface-variant group-hover:bg-primary-fixed group-hover:text-primary">
-                <Icon className="h-3.5 w-3.5" />
-              </span>
-              <span className="font-label text-sm">{t(labelKey)}</span>
-            </NavLink>
-          ))}
-        </nav>
+      <nav aria-label={t('layout.primaryNavigation')} className="flex flex-1 flex-col gap-1.5">
+        {primaryNavItems.map(({ to, labelKey, icon: Icon }) => (
+          <NavLink
+            key={to}
+            to={to}
+            className={({ isActive }) =>
+              cn(
+                'group flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-semibold text-on-surface-variant transition',
+                isActive
+                  ? 'border-primary/15 bg-white text-primary shadow-sm'
+                  : 'border-transparent hover:border-outline/20 hover:bg-white hover:text-primary',
+              )
+            }
+          >
+            <span className="grid h-6 w-6 place-items-center rounded-md bg-surface-container text-on-surface-variant group-hover:bg-primary-fixed group-hover:text-primary">
+              <Icon className="h-3.5 w-3.5" />
+            </span>
+            <span className="font-label text-sm">{t(labelKey)}</span>
+          </NavLink>
+        ))}
+      </nav>
 
-        <button
-          type="button"
-          className="group mt-4 flex items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 text-left text-sm font-semibold text-on-surface-variant transition hover:border-outline/20 hover:bg-white hover:text-primary"
-          onClick={() => setMobileDeviceOpen(true)}
-          aria-label={t('layout.mobileDevice.title')}
-        >
-          <span className="grid h-6 w-6 place-items-center rounded-md bg-surface-container text-on-surface-variant group-hover:bg-primary-fixed group-hover:text-primary">
-            <Smartphone className="h-3.5 w-3.5" />
-          </span>
-          <span className="font-label text-sm">{t('layout.mobileDevice.title')}</span>
-        </button>
-      </aside>
-
-      {mobileDeviceOpen ? <MobileDeviceDialog onClose={() => setMobileDeviceOpen(false)} /> : null}
-    </>
+      <button
+        type="button"
+        className="group mt-4 flex items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 text-left text-sm font-semibold text-on-surface-variant transition hover:border-outline/20 hover:bg-white hover:text-primary"
+        onClick={openMobileDevice}
+        aria-label={t('layout.mobileDevice.title')}
+      >
+        <span className="grid h-6 w-6 place-items-center rounded-md bg-surface-container text-on-surface-variant group-hover:bg-primary-fixed group-hover:text-primary">
+          <Smartphone className="h-3.5 w-3.5" />
+        </span>
+        <span className="font-label text-sm">{t('layout.mobileDevice.title')}</span>
+      </button>
+    </aside>
   )
 }

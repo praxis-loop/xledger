@@ -1,12 +1,38 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import App from './App'
 import { AuthProvider } from './features/auth/auth-context'
 import { useCreateTransaction } from './features/transactions/transactions-hooks'
 
 const originalFetch = global.fetch
+
+function mockViewportWidth(width: number) {
+  vi.stubGlobal('matchMedia', vi.fn((query: string) => ({
+    matches: query === '(max-width: 999px)' ? width <= 999 : false,
+    media: query,
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn(() => true),
+  } satisfies MediaQueryList)))
+}
+
+function LocationProbe() {
+  const location = useLocation()
+  const state = location.state as { from?: string } | null
+
+  return (
+    <output
+      data-testid="router-location"
+      data-pathname={location.pathname}
+      data-from={state?.from ?? ''}
+    />
+  )
+}
 
 function renderTransactionsApp(initialEntries: string[]) {
   window.localStorage.setItem(
@@ -33,6 +59,7 @@ function renderTransactionsApp(initialEntries: string[]) {
           future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
         >
           <App />
+          <LocationProbe />
         </MemoryRouter>
       </AuthProvider>
     </QueryClientProvider>,
@@ -371,6 +398,7 @@ describe('transactions domain', () => {
   afterEach(() => {
     global.fetch = originalFetch
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
     window.localStorage.clear()
   })
 
@@ -389,12 +417,197 @@ describe('transactions domain', () => {
     expect(screen.getAllByText(/25\.00/).length).toBeGreaterThan(0)
     expect(screen.getByText(/15,000\.00/)).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /calendar view/i }))
+    await user.click(screen.getByRole('radio', { name: /calendar view/i }))
 
     await waitFor(() => {
       expect(screen.getByText(/daily summary/i)).toBeInTheDocument()
       expect(screen.getByText(/month summary/i)).toBeInTheDocument()
     })
+  })
+
+  it('exposes the compact mobile transaction hierarchy and action menu', async () => {
+    const fetchMock = createTransactionsFetchMock()
+    global.fetch = fetchMock as typeof fetch
+
+    renderTransactionsApp(['/transactions'])
+    const user = userEvent.setup()
+
+    const page = await screen.findByTestId('mobile-transaction-page')
+    expect(page).toHaveAttribute('data-ui', 'ios-transactions-page')
+    const viewControl = within(page).getByRole('radiogroup', { name: /transaction view/i })
+    expect(viewControl).toHaveClass('md:w-full', 'min-[1000px]:w-auto')
+    expect(within(page).getAllByRole('button', { name: /add transaction/i })).toHaveLength(1)
+    const desktopActions = within(page).getByTestId('desktop-transaction-actions')
+    const exportSummary = await within(desktopActions).findByText(/export 5 transactions/i)
+    expect(exportSummary).toHaveClass(
+      'rounded-full',
+      'bg-surface-container',
+      'px-3',
+      'py-1.5',
+    )
+
+    const smartViews = within(page).getByRole('region', { name: /smart views/i })
+    expect(within(within(smartViews).getByTestId('mobile-smart-view-list')).getAllByRole('button')).toHaveLength(4)
+
+    const moreButton = within(page).getByRole('button', { name: /more transaction actions/i })
+    await user.click(moreButton)
+    const actions = within(page).getByRole('menu', { name: /transaction actions/i })
+    const importAction = within(actions).getByRole('menuitem', { name: /^import$/i })
+    expect(importAction).toBeInTheDocument()
+    expect(within(actions).getByRole('menuitem', { name: /^export$/i })).toBeInTheDocument()
+    await waitFor(() => expect(importAction).toHaveFocus())
+
+    await user.keyboard('{Escape}')
+    expect(within(page).queryByRole('menu', { name: /transaction actions/i })).not.toBeInTheDocument()
+    expect(moreButton).toHaveFocus()
+
+    await user.click(moreButton)
+    await user.click(within(page).getByRole('menuitem', { name: /^import$/i }))
+    await waitFor(() => {
+      expect(screen.getByTestId('router-location')).toHaveAttribute('data-pathname', '/import')
+      expect(screen.getByTestId('router-location')).toHaveAttribute('data-from', '/transactions')
+    })
+  })
+
+  it('supports mobile action menu keyboard navigation without trapping Tab', async () => {
+    const fetchMock = createTransactionsFetchMock()
+    global.fetch = fetchMock as typeof fetch
+
+    renderTransactionsApp(['/transactions'])
+    const user = userEvent.setup()
+
+    const page = await screen.findByTestId('mobile-transaction-page')
+    const moreButton = within(page).getByRole('button', { name: /more transaction actions/i })
+    const addButton = within(page).getByRole('button', { name: /add transaction/i })
+    await user.click(moreButton)
+
+    const menu = within(page).getByRole('menu', { name: /transaction actions/i })
+    const importAction = within(menu).getByRole('menuitem', { name: /^import$/i })
+    const exportAction = within(menu).getByRole('menuitem', { name: /^export$/i })
+    await waitFor(() => expect(importAction).toHaveFocus())
+
+    await user.keyboard('{ArrowDown}')
+    expect(exportAction).toHaveFocus()
+    await user.keyboard('{ArrowDown}')
+    expect(importAction).toHaveFocus()
+    await user.keyboard('{ArrowUp}')
+    expect(exportAction).toHaveFocus()
+    await user.keyboard('{Home}')
+    expect(importAction).toHaveFocus()
+    await user.keyboard('{End}')
+    expect(exportAction).toHaveFocus()
+
+    await user.tab()
+    await waitFor(() => {
+      expect(within(page).queryByRole('menu', { name: /transaction actions/i })).not.toBeInTheDocument()
+      expect(addButton).toHaveFocus()
+    })
+
+    await user.click(moreButton)
+    await waitFor(() => expect(within(page).getByRole('menuitem', { name: /^import$/i })).toHaveFocus())
+    await user.tab({ shift: true })
+    await waitFor(() => {
+      expect(within(page).queryByRole('menu', { name: /transaction actions/i })).not.toBeInTheDocument()
+      expect(moreButton).toHaveFocus()
+    })
+
+    await user.click(moreButton)
+    await waitFor(() => expect(within(page).getByRole('menuitem', { name: /^import$/i })).toHaveFocus())
+    await user.tab()
+    await waitFor(() => {
+      expect(within(page).queryByRole('menu', { name: /transaction actions/i })).not.toBeInTheDocument()
+      expect(addButton).toHaveFocus()
+    })
+
+    await user.click(moreButton)
+    await waitFor(() => expect(within(page).getByRole('menuitem', { name: /^import$/i })).toHaveFocus())
+    await user.keyboard('{ArrowDown}')
+    expect(within(page).getByRole('menuitem', { name: /^export$/i })).toHaveFocus()
+    await user.tab({ shift: true })
+    await waitFor(() => {
+      expect(within(page).queryByRole('menu', { name: /transaction actions/i })).not.toBeInTheDocument()
+      expect(moreButton).toHaveFocus()
+    })
+  })
+
+  it('closes the mobile transaction menu after export and restores trigger focus', async () => {
+    const baseFetch = createTransactionsFetchMock()
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).includes('/api/export?')) {
+        return new Response('date,amount\n2026-03-01,25', { status: 200 })
+      }
+      return baseFetch(input, init)
+    })
+    global.fetch = fetchMock as typeof fetch
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mobile-transactions-export')
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
+
+    renderTransactionsApp(['/transactions'])
+    const user = userEvent.setup()
+
+    const page = await screen.findByTestId('mobile-transaction-page')
+    const moreButton = within(page).getByRole('button', { name: /more transaction actions/i })
+    await user.click(moreButton)
+    await user.click(within(page).getByRole('menuitem', { name: /^export$/i }))
+
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.some(([input]) => String(input).includes('/api/export?'))).toBe(true)
+      expect(within(page).queryByRole('menu', { name: /transaction actions/i })).not.toBeInTheDocument()
+      expect(moreButton).toHaveFocus()
+    })
+  })
+
+  it('keeps the export error visible without leaking a rejected mobile action promise', async () => {
+    const baseFetch = createTransactionsFetchMock()
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).includes('/api/export?')) {
+        return new Response('export unavailable', { status: 503 })
+      }
+      return baseFetch(input, init)
+    })
+    global.fetch = fetchMock as typeof fetch
+    const unhandledRejection = vi.fn((event: PromiseRejectionEvent) => event.preventDefault())
+    window.addEventListener('unhandledrejection', unhandledRejection)
+
+    try {
+      renderTransactionsApp(['/transactions'])
+      const user = userEvent.setup()
+
+      const page = await screen.findByTestId('mobile-transaction-page')
+      const moreButton = within(page).getByRole('button', { name: /more transaction actions/i })
+      await user.click(moreButton)
+      await user.click(within(page).getByRole('menuitem', { name: /^export$/i }))
+
+      expect(await within(page).findByText(/export failed/i)).toBeInTheDocument()
+      expect(within(page).queryByRole('menu', { name: /transaction actions/i })).not.toBeInTheDocument()
+      expect(moreButton).toHaveFocus()
+      await Promise.resolve()
+      expect(unhandledRejection).not.toHaveBeenCalled()
+    } finally {
+      window.removeEventListener('unhandledrejection', unhandledRejection)
+    }
+  })
+
+  it('renders mobile transaction cards at 999px', async () => {
+    mockViewportWidth(999)
+    const fetchMock = createTransactionsFetchMock()
+    global.fetch = fetchMock as typeof fetch
+
+    renderTransactionsApp(['/transactions'])
+
+    expect(await screen.findByTestId('mobile-transaction-cards')).toBeInTheDocument()
+    expect(screen.getByTestId('desktop-transaction-table')).toHaveClass('hidden', 'min-[1000px]:block')
+  })
+
+  it('renders the desktop transaction table state at 1000px', async () => {
+    mockViewportWidth(1000)
+    const fetchMock = createTransactionsFetchMock()
+    global.fetch = fetchMock as typeof fetch
+
+    renderTransactionsApp(['/transactions'])
+
+    expect(await screen.findByTestId('desktop-transaction-table')).toBeInTheDocument()
+    expect(screen.queryByTestId('mobile-transaction-cards')).not.toBeInTheDocument()
   })
 
   it('stores transaction form options in the shared management query cache', async () => {
@@ -523,9 +736,9 @@ describe('transactions domain', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /smart views/i })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /needs review/i })).toBeInTheDocument()
-      expect(screen.getByText(/1 uncategorized/i)).toBeInTheDocument()
-      expect(screen.getByText(/1 possible duplicate/i)).toBeInTheDocument()
-      expect(screen.getByText(/1 large transaction/i)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /focus uncategorized review/i })).toHaveTextContent(/missing category.*1/i)
+      expect(screen.getByRole('button', { name: /focus duplicate review/i })).toHaveTextContent(/possible duplicate.*1/i)
+      expect(screen.getByRole('button', { name: /focus large review/i })).toHaveTextContent(/large expense.*1/i)
     })
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/api/transactions/review-items'))).toBe(false)
 

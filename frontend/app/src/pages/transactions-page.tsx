@@ -1,11 +1,12 @@
-import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Download, FileDown, Search, SlidersHorizontal, Trash2, Undo2, Upload } from 'lucide-react'
+import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Download, Ellipsis, FileDown, Plus, Search, SlidersHorizontal, Trash2, Undo2, Upload } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { DialogShell } from '@/components/ui/dialog-shell'
 import { SelectField } from '@/components/ui/select-field'
+import { SegmentedControl } from '@/components/ui/segmented-control'
 import { TextField } from '@/components/ui/text-field'
 import type { ImportConfirmRequest, ImportConfirmResponse, ImportRowInput, TransactionRecord } from '@/features/transactions/transactions-api'
 import {
@@ -467,6 +468,9 @@ export function TransactionsPage() {
   const [quickFilter, setQuickFilter] = useState<QuickFilter>(initialQuickFilter)
   const [reviewReasonFilter, setReviewReasonFilter] = useState<ReviewReasonFilter>('all')
   const [mobileFiltersExpanded, setMobileFiltersExpanded] = useState(false)
+  const [mobileActionsOpen, setMobileActionsOpen] = useState(false)
+  const mobileActionsButtonRef = useRef<HTMLButtonElement>(null)
+  const mobileActionsMenuRef = useRef<HTMLDivElement>(null)
   const [deletedTransactionIds, setDeletedTransactionIds] = useState<Set<string>>(() => new Set())
   const [dismissedReviewIds, setDismissedReviewIds] = useState<Set<string>>(() => new Set())
   const [pendingUndo, setPendingUndo] = useState<TransactionRecord | null>(null)
@@ -491,8 +495,17 @@ export function TransactionsPage() {
   }, [smartParam])
 
   useEffect(() => {
+    if (!mobileActionsOpen) return undefined
+
+    mobileActionsMenuRef.current
+      ?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')
+      ?.focus()
+    return undefined
+  }, [mobileActionsOpen])
+
+  useEffect(() => {
     if (!globalThis.matchMedia) return undefined
-    const query = globalThis.matchMedia('(max-width: 767px)')
+    const query = globalThis.matchMedia('(max-width: 999px)')
     const updateLayout = () => setIsMobileListLayout(query.matches)
     updateLayout()
     query.addEventListener('change', updateLayout)
@@ -962,6 +975,60 @@ export function TransactionsPage() {
     URL.revokeObjectURL(url)
   }
 
+  async function handleMobileExportTransactions() {
+    try {
+      await handleExportTransactions()
+    } catch {
+      // The mutation retains the error for the page-level export status.
+      return
+    } finally {
+      setMobileActionsOpen(false)
+      mobileActionsButtonRef.current?.focus()
+    }
+  }
+
+  function handleMobileImport() {
+    setMobileActionsOpen(false)
+    navigate('/import', { state: { from: '/transactions' } })
+  }
+
+  function handleMobileActionsKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key === 'Tab') {
+      window.setTimeout(() => setMobileActionsOpen(false), 0)
+      return
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      setMobileActionsOpen(false)
+      mobileActionsButtonRef.current?.focus()
+      return
+    }
+
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
+    const menuItems = Array.from(
+      mobileActionsMenuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? [],
+    ).filter((item) => !item.disabled)
+    if (menuItems.length === 0) return
+
+    event.preventDefault()
+    const currentIndex = menuItems.indexOf(document.activeElement as HTMLButtonElement)
+    if (event.key === 'Home') {
+      menuItems[0].focus()
+      return
+    }
+    if (event.key === 'End') {
+      menuItems[menuItems.length - 1].focus()
+      return
+    }
+
+    const direction = event.key === 'ArrowDown' ? 1 : -1
+    const nextIndex = currentIndex === -1
+      ? direction === 1 ? 0 : menuItems.length - 1
+      : (currentIndex + direction + menuItems.length) % menuItems.length
+    menuItems[nextIndex].focus()
+  }
+
   async function handleDeleteTransaction(tx: TransactionRecord) {
     await deleteTransactionMutation.mutateAsync(tx.id)
     setDeletedTransactionIds((current) => new Set(current).add(tx.id))
@@ -1116,47 +1183,96 @@ export function TransactionsPage() {
   const exportTotal = listTransactionsQuery.data?.pagination.total ?? filteredListTransactions.length
 
   return (
-    <div className="space-y-5">
-      <section className="rounded-2xl border border-outline/15 bg-surface-container-lowest p-5 shadow-ambient md:p-6">
+    <div className="-mx-4 w-[calc(100%+2rem)] space-y-5 px-4 min-[1000px]:mx-0 min-[1000px]:w-auto min-[1000px]:px-0">
+      <section
+        data-testid="mobile-transaction-page"
+        data-ui="ios-transactions-page"
+        className="border-0 bg-transparent shadow-none min-[1000px]:rounded-2xl min-[1000px]:border min-[1000px]:border-outline/15 min-[1000px]:bg-surface-container-lowest min-[1000px]:p-6 min-[1000px]:shadow-ambient"
+      >
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <h2 className="font-headline text-4xl font-extrabold leading-tight text-primary md:text-[42px]">
-              {t('transactionsPage.title')}
-            </h2>
-            <div className="inline-flex rounded-xl border border-outline/15 bg-surface-container p-1">
-              <button
-                type="button"
-                className={`min-h-9 rounded-lg px-4 py-2 text-xs font-semibold ${view === 'list' ? 'bg-white text-primary shadow-sm' : 'text-on-surface-variant hover:text-primary'}`}
-                onClick={() => setView('list')}
+          <h2 className="font-headline text-[34px] font-extrabold leading-tight text-primary min-[1000px]:text-[42px]">
+            {t('transactionsPage.title')}
+          </h2>
+          <SegmentedControl
+            ariaLabel={t('transactionsPage.viewLabel')}
+            value={view}
+            options={[
+              { value: 'list', label: t('transactionsPage.listView') },
+              { value: 'calendar', label: t('transactionsPage.calendarView') },
+            ]}
+            onChange={setView}
+            className="order-3 md:w-full min-[1000px]:order-none min-[1000px]:w-auto"
+          />
+          <div className="flex items-center gap-2 min-[1000px]:gap-3">
+            <div data-testid="desktop-transaction-actions" className="hidden items-center gap-3 min-[1000px]:flex">
+              <Button
+                variant="secondary"
+                onClick={() => void handleExportTransactions()}
+                disabled={exportTransactionsMutation.isPending}
               >
-                {t('transactionsPage.listView')}
-              </button>
-              <button
-                type="button"
-                className={`min-h-9 rounded-lg px-4 py-2 text-xs font-semibold ${view === 'calendar' ? 'bg-white text-primary shadow-sm' : 'text-on-surface-variant hover:text-primary'}`}
-                onClick={() => setView('calendar')}
-              >
-                {t('transactionsPage.calendarView')}
-              </button>
+                <Download className="h-4 w-4" />
+                {exportTransactionsMutation.isPending ? t('transactionsPage.exporting') : t('transactionsPage.export')}
+              </Button>
+              <span className="rounded-full bg-surface-container px-3 py-1.5 text-xs font-bold text-on-surface-variant">
+                {t('transactionsPage.exportSummary', { count: exportTotal })}
+              </span>
+              <Button variant="secondary" onClick={() => setShowImportDialog(true)}>
+                <Upload className="h-4 w-4" />
+                {t('transactionsPage.import')}
+              </Button>
             </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 md:gap-3">
+            <div className="relative min-[1000px]:hidden">
+              <button
+                ref={mobileActionsButtonRef}
+                type="button"
+                aria-label={t('transactionsPage.mobileActions.more')}
+                aria-haspopup="menu"
+                aria-expanded={mobileActionsOpen}
+                aria-controls="mobile-transaction-actions"
+                className="grid h-11 w-11 place-items-center rounded-full border border-outline/15 bg-white text-primary shadow-sm"
+                onClick={() => setMobileActionsOpen((current) => !current)}
+              >
+                <Ellipsis className="h-5 w-5" />
+              </button>
+              {mobileActionsOpen ? (
+                <div
+                  ref={mobileActionsMenuRef}
+                  id="mobile-transaction-actions"
+                  role="menu"
+                  aria-label={t('transactionsPage.mobileActions.menuLabel')}
+                  className="absolute right-0 top-12 z-30 min-w-40 overflow-hidden rounded-xl border border-outline/15 bg-white p-1 shadow-ambient"
+                  onKeyDown={handleMobileActionsKeyDown}
+                >
+                  <button
+                    role="menuitem"
+                    type="button"
+                    tabIndex={-1}
+                    className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-on-surface hover:bg-surface-container-low"
+                    onClick={handleMobileImport}
+                  >
+                    {t('transactionsPage.import')}
+                  </button>
+                  <button
+                    role="menuitem"
+                    type="button"
+                    tabIndex={-1}
+                    disabled={exportTransactionsMutation.isPending}
+                    className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-on-surface hover:bg-surface-container-low disabled:opacity-60"
+                    onClick={() => void handleMobileExportTransactions()}
+                  >
+                    {exportTransactionsMutation.isPending ? t('transactionsPage.exporting') : t('transactionsPage.export')}
+                  </button>
+                </div>
+              ) : null}
+            </div>
             <Button
-              variant="secondary"
-              onClick={() => void handleExportTransactions()}
-              disabled={exportTransactionsMutation.isPending}
+              aria-label={t('transactionsPage.addTransaction')}
+              className="h-11 min-w-11 px-3 min-[1000px]:px-4"
+              onClick={() => setShowAddDialog(true)}
             >
-              <Download className="h-4 w-4" />
-              {exportTransactionsMutation.isPending ? t('transactionsPage.exporting') : t('transactionsPage.export')}
+              <Plus className="h-5 w-5 min-[1000px]:hidden" />
+              <span className="hidden min-[1000px]:inline">{t('transactionsPage.addTransaction')}</span>
             </Button>
-            <span className="rounded-full bg-surface-container px-3 py-1.5 text-xs font-bold text-on-surface-variant">
-              {t('transactionsPage.exportSummary', { count: exportTotal })}
-            </span>
-            <Button variant="secondary" onClick={() => setShowImportDialog(true)}>
-              <Upload className="h-4 w-4" />
-              {t('transactionsPage.import')}
-            </Button>
-            <Button onClick={() => setShowAddDialog(true)}>{t('transactionsPage.addTransaction')}</Button>
           </div>
         </div>
         {exportTransactionsMutation.isError ? (
@@ -1169,36 +1285,58 @@ export function TransactionsPage() {
 
         {view === 'list' ? (
           <div className="mt-6 space-y-4">
-            <article className="rounded-2xl border border-outline/10 bg-surface-container-low p-5">
+            <article
+              role="region"
+              aria-labelledby="transaction-smart-views-title"
+              data-ui="ios-grouped-list"
+              className="bg-transparent p-0 min-[1000px]:rounded-2xl min-[1000px]:border min-[1000px]:border-outline/10 min-[1000px]:bg-surface-container-low min-[1000px]:p-5"
+            >
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h3 className="font-headline text-2xl font-bold leading-tight text-on-surface">
+                  <h3 id="transaction-smart-views-title" className="font-headline text-2xl font-bold leading-tight text-on-surface">
                     {t('transactionsPage.smartViews.title')}
                   </h3>
                   <p className="mt-1 text-sm text-on-surface-variant">{t('transactionsPage.smartViews.description')}</p>
                 </div>
-                <div className="grid gap-2 text-xs font-bold text-on-surface-variant sm:grid-cols-2 xl:grid-cols-4">
-                  <span className="rounded-full bg-primary px-3 py-2 text-white">
-                    {t('transactionsPage.smartViews.reviewCount', { count: smartViewCounts.review })}
-                  </span>
-                  <span className="rounded-full bg-white px-3 py-2">
-                    {t('transactionsPage.smartViews.uncategorizedCount', { count: smartViewCounts.uncategorized })}
-                  </span>
-                  <span className="rounded-full bg-white px-3 py-2">
-                    {t('transactionsPage.smartViews.duplicateCount', { count: smartViewCounts.duplicates })}
-                  </span>
-                  <span className="rounded-full bg-white px-3 py-2">
-                    {t('transactionsPage.smartViews.largeCount', { count: smartViewCounts.large })}
-                  </span>
-                </div>
               </div>
-              <div className="mb-4 flex flex-wrap items-center gap-2">
+              <div
+                data-testid="mobile-smart-view-list"
+                className="mb-4 overflow-hidden rounded-2xl bg-white min-[1000px]:grid min-[1000px]:grid-cols-4 min-[1000px]:gap-2 min-[1000px]:overflow-visible min-[1000px]:rounded-none min-[1000px]:bg-transparent"
+              >
+                {reviewReasonFilters.map((filter, index) => (
+                  <button
+                    key={filter.id}
+                    type="button"
+                    aria-label={t(`transactionsPage.reviewFocus.ariaLabels.${filter.id}`)}
+                    aria-pressed={quickFilter === 'review' && reviewReasonFilter === filter.id}
+                    className={`flex min-h-11 w-full items-center gap-3 px-4 py-3 text-left text-sm font-bold transition min-[1000px]:rounded-full min-[1000px]:border min-[1000px]:px-3 min-[1000px]:py-2 min-[1000px]:text-xs ${
+                      index < reviewReasonFilters.length - 1 ? 'border-b border-outline/10 min-[1000px]:border-b' : ''
+                    } ${
+                      quickFilter === 'review' && reviewReasonFilter === filter.id
+                        ? 'bg-primary text-white min-[1000px]:border-primary'
+                        : 'text-on-surface hover:bg-surface-container-low min-[1000px]:border-outline/15 min-[1000px]:bg-white min-[1000px]:text-on-surface-variant'
+                    }`}
+                    onClick={() => {
+                      setQuickFilter('review')
+                      setReviewReasonFilter(filter.id)
+                    }}
+                  >
+                    <span className="flex-1">{filter.label}</span>
+                    <span className="tabular-nums">{filter.count}</span>
+                    <ChevronRight className="h-4 w-4 text-on-surface-variant min-[1000px]:hidden" />
+                  </button>
+                ))}
+              </div>
+              <div
+                data-ui="transaction-quick-filters"
+                className="mb-4 flex min-w-0 max-w-full flex-nowrap items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden min-[1000px]:flex-wrap min-[1000px]:overflow-visible"
+              >
                 {quickFilters.map((filter) => (
                   <button
                     key={filter.id}
                     type="button"
                     aria-pressed={quickFilter === filter.id}
-                    className={`min-h-9 rounded-full border px-3 py-2 text-xs font-bold transition ${
+                    className={`min-h-11 shrink-0 rounded-full border px-3 py-2 text-xs font-bold transition min-[1000px]:min-h-9 ${
                       quickFilter === filter.id
                         ? 'border-primary bg-primary text-white shadow-sm'
                         : 'border-outline/15 bg-white text-on-surface-variant hover:border-primary/30 hover:text-primary'
@@ -1216,7 +1354,7 @@ export function TransactionsPage() {
               </div>
               <button
                 type="button"
-                className="mb-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-outline/15 bg-white px-3 py-2 text-xs font-bold text-on-surface-variant shadow-sm transition hover:border-primary/30 hover:text-primary md:hidden"
+                className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-outline/15 bg-white px-3 py-2 text-xs font-bold text-on-surface-variant shadow-sm transition hover:border-primary/30 hover:text-primary min-[1000px]:hidden"
                 aria-controls="transaction-advanced-filters"
                 aria-expanded={mobileFiltersExpanded}
                 onClick={() => setMobileFiltersExpanded((current) => !current)}
@@ -1224,32 +1362,8 @@ export function TransactionsPage() {
                 <SlidersHorizontal className="h-4 w-4" />
                 {mobileFiltersExpanded ? t('transactionsPage.filters.hideAdvanced') : t('transactionsPage.filters.showAdvanced')}
               </button>
-              <div id="transaction-advanced-filters" className={`${mobileFiltersExpanded ? 'block' : 'hidden'} md:block`}>
-                <div className="mb-4 flex flex-wrap items-center gap-2 border-t border-outline/10 pt-4">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
-                    {t('transactionsPage.reviewFocus.title')}
-                  </span>
-                  {reviewReasonFilters.map((filter) => (
-                    <button
-                      key={filter.id}
-                      type="button"
-                      aria-label={t(`transactionsPage.reviewFocus.ariaLabels.${filter.id}`)}
-                      aria-pressed={reviewReasonFilter === filter.id}
-                      className={`min-h-10 rounded-full border px-3 py-2 text-[11px] font-bold transition ${
-                        reviewReasonFilter === filter.id
-                          ? 'border-primary bg-white text-primary shadow-sm'
-                          : 'border-outline/15 bg-white/70 text-on-surface-variant hover:border-primary/30 hover:text-primary'
-                      }`}
-                      onClick={() => {
-                        setQuickFilter('review')
-                        setReviewReasonFilter(filter.id)
-                      }}
-                    >
-                      {filter.label} · {filter.count}
-                    </button>
-                  ))}
-                </div>
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+              <div id="transaction-advanced-filters" className={`${mobileFiltersExpanded ? 'block' : 'hidden'} min-[1000px]:block`}>
+                <div className="grid gap-3 min-[1000px]:grid-cols-2 xl:grid-cols-6">
                 <label className="space-y-2">
                   <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
                     {t('transactionsPage.filters.searchLedger')}
@@ -1419,7 +1533,10 @@ export function TransactionsPage() {
             ) : null}
 
             {filteredListTransactions.length > 0 ? (
-              <article className="hidden overflow-x-auto rounded-2xl border border-outline/15 bg-white md:block">
+              <article
+                data-testid="desktop-transaction-table"
+                className="hidden overflow-x-auto rounded-2xl border border-outline/15 bg-white min-[1000px]:block"
+              >
                 <div className="grid min-w-[980px] grid-cols-[44px_1.6fr_1fr_1fr_1fr_0.75fr_1fr_0.55fr] bg-surface-container-low px-5 py-3 text-[10px] font-bold uppercase tracking-[0.08em] text-on-surface-variant">
                   <p>{t('transactionsPage.table.select')}</p>
                   <p>{t('transactionsPage.table.transactionCategory')}</p>
@@ -1549,7 +1666,7 @@ export function TransactionsPage() {
               </article>
             )}
             {isMobileListLayout && filteredListTransactions.length > 0 ? (
-              <div className="space-y-3 md:hidden">
+              <div data-testid="mobile-transaction-cards" className="space-y-3 min-[1000px]:hidden">
                 {filteredListTransactions.map((tx) => {
                   const reviewReasonKeys = backendReviewReasonById.get(tx.id) ?? getReviewReasonKeys(tx, duplicateTransactionIds)
                   return (

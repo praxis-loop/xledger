@@ -3,6 +3,7 @@ import { bootstrapAuthedSession } from './helpers/ui-flows'
 import { expect, test } from './fixture'
 
 test('profile flow: save profile can also change password', async ({ page, recordToReport }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
   const { apiClient, session } = await bootstrapAuthedSession(page, testInfo)
   const newPassword = `E2E-new-pass-${Date.now()}`
 
@@ -31,4 +32,15 @@ test('profile flow: save profile can also change password', async ({ page, recor
   await recordToReport('Profile password update verification passed', {
     content: `password changed for ${session.email}`,
   })
+})
+
+test('mobile Me page opens the shared profile dialog', async ({ page }, testInfo) => {
+  await bootstrapAuthedSession(page, testInfo)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/me', { waitUntil: 'networkidle' })
+
+  await page.getByRole('button', { name: /profile/i }).click()
+
+  await expect(page.getByRole('heading', { name: /^profile$/i })).toBeVisible()
+  await expect(page.getByLabel('Display Name')).toBeVisible()
 })

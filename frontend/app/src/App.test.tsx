@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import App from './App'
@@ -93,9 +93,22 @@ describe('App shell', () => {
       expect(screen.getByRole('navigation', { name: /primary/i })).toBeInTheDocument()
       expect(screen.getByText(/demo@example.com/i)).toBeInTheDocument()
     })
+
+    const topBar = screen.getByRole('banner')
+    const main = screen.getByRole('main')
+
+    expect(topBar).toHaveAttribute('data-ui', 'desktop-top-bar')
+    expect(topBar).toHaveClass('max-[999px]:hidden')
+    expect(main).toHaveClass('pb-mobile-nav')
+    expect(main).toHaveClass(
+      'pt-[calc(var(--safe-area-top)+1rem)]',
+      'min-[1000px]:pt-5',
+      'xl:pt-6',
+    )
+    expect(main).not.toHaveClass('pt-4')
   })
 
-  it('opens a QR code entry for mobile devices from the app shell', async () => {
+  it('keeps profile and mobile device actions working from the desktop app shell', async () => {
     const user = userEvent.setup()
     global.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
@@ -142,13 +155,39 @@ describe('App shell', () => {
     )
 
     renderApp(['/dashboard'])
+    const primaryNavigation = await screen.findByRole('navigation', { name: /primary/i })
+    const shellContent = primaryNavigation.closest('div.min-h-screen')
+    const sideNavigation = primaryNavigation.closest('aside')
 
-    const mobileEntryButtons = await screen.findAllByRole('button', { name: /use on mobile device/i })
-    await user.click(mobileEntryButtons[0])
+    if (!shellContent || !sideNavigation) {
+      throw new Error('Expected AppShell content and SideNav')
+    }
 
-    expect(screen.getByRole('heading', { name: /use on mobile device/i })).toBeInTheDocument()
+    const sideNavMobileTrigger = within(sideNavigation).getByRole('button', {
+      name: /use on mobile device/i,
+    })
+    await user.click(sideNavMobileTrigger)
+
+    const sideNavDialogHeading = screen.getByRole('heading', { name: /use on mobile device/i })
+    expect(shellContent).not.toContainElement(sideNavDialogHeading)
+    expect(screen.getByLabelText(/mobile entry qr code/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /close dialog/i }))
+
+    const topBar = screen.getByRole('banner')
+    const topBarMobileTrigger = within(topBar).getByRole('button', {
+      name: /use on mobile device/i,
+    })
+    await user.click(topBarMobileTrigger)
+
+    const topBarDialogHeading = screen.getByRole('heading', { name: /use on mobile device/i })
+    expect(shellContent).not.toContainElement(topBarDialogHeading)
     expect(screen.getByLabelText(/mobile entry qr code/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /switch to mobile version/i })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /close dialog/i }))
+
+    await user.click(within(topBar).getByRole('button', { name: /open profile/i }))
+    expect(screen.getAllByRole('heading', { name: /profile/i })).toHaveLength(1)
+    expect(screen.getByLabelText(/^email$/i)).toBeDisabled()
   })
 
   it('renders the mobile install guide as a protected app page', async () => {

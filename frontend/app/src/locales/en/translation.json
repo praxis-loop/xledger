@@ -228,8 +228,7 @@
       "entries": "Entries",
       "reports": "Reports",
       "accounts": "Accounts",
-      "import": "Import",
-      "settings": "Settings"
+      "me": "Me"
     },
     "routeFallback": "Loading...",
     "authGuard": {
@@ -237,6 +236,24 @@
     },
     "offline": {
       "message": "You are offline. Cached data is being shown."
+    },
+    "accountCenter": {
+      "languageChangeFailed": "Failed to change language.",
+      "logoutFailed": "Failed to log out."
+    },
+    "me": {
+      "title": "Me",
+      "profile": "Profile",
+      "language": "Language",
+      "importData": "Import Data",
+      "mobileDevice": "Mobile Device",
+      "notifications": "Notifications",
+      "help": "Help",
+      "settings": "Settings",
+      "logout": "Logout",
+      "accountActions": "Account Actions",
+      "supportActions": "Support",
+      "destructiveActions": "Destructive Actions"
     },
     "topBar": {
       "searchPlaceholder": "Search transactions...",
@@ -307,6 +324,11 @@
     "title": "Transactions",
     "listView": "List View",
     "calendarView": "Calendar View",
+    "viewLabel": "Transaction view",
+    "mobileActions": {
+      "menuLabel": "Transaction actions",
+      "more": "More transaction actions"
+    },
     "export": "Export",
     "exporting": "Exporting...",
     "exportSummary": "Export {{count}} transactions",
@@ -697,8 +719,23 @@
   },
   "import": {
     "title": "Import Data",
+    "back": "Back",
+    "progressLabel": "Import progress",
+    "stepUpload": "Upload file",
+    "stepMapping": "Map fields",
+    "stepResult": "Review result",
     "selectFile": "Select File",
     "supportedFormats": "Supported: CSV format",
+    "browse": "Browse files",
+    "selectedFile": "Selected file",
+    "guidanceTitle": "Import guidance",
+    "csvTitle": "CSV file",
+    "csvDescription": "Use a CSV file with one transaction per row and a header row.",
+    "encodingTitle": "UTF-8 encoding",
+    "encodingDescription": "Save the file as UTF-8 so names and notes remain readable.",
+    "privacyTitle": "Private by design",
+    "privacyDescription": "Your file is used only to preview and import these transactions.",
+    "csvFileLabel": "CSV file",
     "detectedFormat": "Detected Format",
     "fieldMapping": "Field Mapping",
     "preview": "Preview",

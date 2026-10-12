@@ -228,8 +228,7 @@
       "entries": "交易",
       "reports": "统计",
       "accounts": "账户",
-      "import": "导入",
-      "settings": "设置"
+      "me": "我的"
     },
     "routeFallback": "加载中...",
     "authGuard": {
@@ -237,6 +236,24 @@
     },
     "offline": {
       "message": "当前处于离线状态，正在显示缓存数据。"
+    },
+    "accountCenter": {
+      "languageChangeFailed": "切换语言失败。",
+      "logoutFailed": "退出登录失败。"
+    },
+    "me": {
+      "title": "我的",
+      "profile": "个人资料",
+      "language": "语言",
+      "importData": "导入数据",
+      "mobileDevice": "移动设备",
+      "notifications": "通知",
+      "help": "帮助",
+      "settings": "设置",
+      "logout": "退出登录",
+      "accountActions": "账户操作",
+      "supportActions": "支持",
+      "destructiveActions": "危险操作"
     },
     "topBar": {
       "searchPlaceholder": "搜索交易...",
@@ -307,6 +324,11 @@
     "title": "交易",
     "listView": "列表视图",
     "calendarView": "日历视图",
+    "viewLabel": "交易视图",
+    "mobileActions": {
+      "menuLabel": "交易操作",
+      "more": "更多交易操作"
+    },
     "export": "导出",
     "exporting": "正在导出...",
     "exportSummary": "导出 {{count}} 笔交易",
@@ -697,8 +719,23 @@
   },
   "import": {
     "title": "导入数据",
+    "back": "返回",
+    "progressLabel": "导入进度",
+    "stepUpload": "上传文件",
+    "stepMapping": "映射字段",
+    "stepResult": "查看结果",
     "selectFile": "选择文件",
     "supportedFormats": "支持 CSV 格式",
+    "browse": "浏览文件",
+    "selectedFile": "已选文件",
+    "guidanceTitle": "导入说明",
+    "csvTitle": "CSV 文件",
+    "csvDescription": "请使用带表头的 CSV 文件，每行对应一笔交易。",
+    "encodingTitle": "UTF-8 编码",
+    "encodingDescription": "请将文件保存为 UTF-8，确保名称和备注正常显示。",
+    "privacyTitle": "隐私保护",
+    "privacyDescription": "文件仅用于预览并导入本次交易。",
+    "csvFileLabel": "CSV 文件",
     "detectedFormat": "检测到格式",
     "fieldMapping": "字段映射",
     "preview": "预览",
