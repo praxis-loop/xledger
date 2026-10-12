@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-11T00:00:00+08:00",
+  "title": "Design System: xledger",
+  "extensions": {
+    "colorMeta": {
+      "action-blue": { "role": "primary", "displayName": "Action Blue", "canonical": "oklch(52.2% 0.177 255.8)", "tonalRamp": ["oklch(15% 0.06 255.8)", "oklch(25% 0.10 255.8)", "oklch(35% 0.14 255.8)", "oklch(45% 0.17 255.8)", "oklch(55% 0.17 255.8)", "oklch(70% 0.12 255.8)", "oklch(85% 0.06 255.8)", "oklch(95% 0.02 255.8)"] },
+      "action-blue-tint": { "role": "primary", "displayName": "Action Blue Tint" },
+      "action-blue-tint-pressed": { "role": "primary", "displayName": "Action Blue Tint Pressed" },
+      "income-green": { "role": "secondary", "displayName": "Income Green", "canonical": "oklch(46.7% 0.111 152.6)", "tonalRamp": ["oklch(15% 0.04 152.6)", "oklch(25% 0.07 152.6)", "oklch(35% 0.09 152.6)", "oklch(45% 0.11 152.6)", "oklch(55% 0.11 152.6)", "oklch(70% 0.09 152.6)", "oklch(85% 0.06 152.6)", "oklch(95% 0.03 152.6)"] },
+      "income-tint": { "role": "secondary", "displayName": "Income Tint" },
+      "income-edge": { "role": "secondary", "displayName": "Income Edge" },
+      "expense-red": { "role": "secondary", "displayName": "Expense Red", "canonical": "oklch(50.5% 0.179 17.8)", "tonalRamp": ["oklch(15% 0.06 17.8)", "oklch(25% 0.10 17.8)", "oklch(35% 0.14 17.8)", "oklch(45% 0.17 17.8)", "oklch(55% 0.18 17.8)", "oklch(70% 0.13 17.8)", "oklch(85% 0.06 17.8)", "oklch(95% 0.02 17.8)"] },
+      "expense-tint": { "role": "secondary", "displayName": "Expense Tint" },
+      "expense-edge": { "role": "secondary", "displayName": "Expense Edge" },
+      "error": { "role": "secondary", "displayName": "Error", "canonical": "oklch(50.6% 0.193 27.7)" },
+      "error-tint": { "role": "secondary", "displayName": "Error Tint" },
+      "grouped-ground": { "role": "neutral", "displayName": "Grouped Ground", "canonical": "oklch(96.3% 0.007 286.3)", "tonalRamp": ["oklch(15% 0.007 286.3)", "oklch(25% 0.007 286.3)", "oklch(35% 0.007 286.3)", "oklch(45% 0.007 286.3)", "oklch(55% 0.007 286.3)", "oklch(70% 0.007 286.3)", "oklch(85% 0.007 286.3)", "oklch(96.3% 0.007 286.3)"] },
+      "surface": { "role": "neutral", "displayName": "Surface" },
+      "segment-track": { "role": "neutral", "displayName": "Segment Track" },
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "oklch(22.4% 0.006 236.8)" },
+      "ink-secondary": { "role": "neutral", "displayName": "Ink Secondary", "canonical": "oklch(39.6% 0.022 275.1)" },
+      "ink-tertiary": { "role": "neutral", "displayName": "Ink Tertiary", "canonical": "oklch(54.0% 0.008 286.1)" },
+      "control-ink": { "role": "neutral", "displayName": "Control Ink" },
+      "hairline": { "role": "neutral", "displayName": "Hairline" }
+    },
+    "typographyMeta": {
+      "large-title": { "displayName": "Large Title", "purpose": "每页一个导航大标题；手机 34px / 700，桌面 44px / 800。" },
+      "figure": { "displayName": "Figure", "purpose": "指标卡金额，手机 24px / 桌面 36px，全站最大的数字。" },
+      "headline": { "displayName": "Headline", "purpose": "分组区块标题。" },
+      "body": { "displayName": "Body", "purpose": "说明与列表正文，段落约 65ch。" },
+      "label": { "displayName": "Label", "purpose": "分段控件、指标卡、表单标签，句首大写、正常字距。" },
+      "tab-label": { "displayName": "Tab Label", "purpose": "底部标签栏专用的最小字号。" }
+    },
+    "shadows": [
+      { "name": "ambient", "value": "0 10px 24px rgba(25, 28, 30, 0.055)", "purpose": "主按钮与浮起白色面板的极淡环境阴影。" },
+      { "name": "segment-thumb", "value": "0 1px 2px rgba(0, 0, 0, 0.12)", "purpose": "分段控件选中块。" },
+      { "name": "scrim", "value": "rgba(15, 23, 42, 0.24)", "purpose": "对话框遮罩，配 backdrop-blur-sm。" }
+    ],
+    "motion": [
+      { "name": "state-transition", "value": "200ms ease (Tailwind transition default)", "purpose": "颜色、背景状态过渡；配 motion-reduce:transition-none。" },
+      { "name": "press", "value": "transform: scale(0.98)", "purpose": "主按钮按下反馈。" }
+    ],
+    "breakpoints": [
+      { "name": "md", "value": "768px" },
+      { "name": "shell", "value": "1000px" },
+      { "name": "xl", "value": "1280px" },
+      { "name": "content-max", "value": "1680px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "主操作：操作蓝实底白字，44px 高。",
+      "html": "<button class=\"ds-btn-primary\">记一笔</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 16px; border: none; border-radius: 4px; background: #0066cc; color: #fff; font: 600 14px -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif; box-shadow: 0 10px 24px rgba(25, 28, 30, 0.055); cursor: pointer; transition: background-color 200ms, transform 200ms; } .ds-btn-primary:hover { background: #0059b3; } .ds-btn-primary:active { transform: scale(0.98); } .ds-btn-primary:focus-visible { outline: 2px solid #0066cc; outline-offset: 2px; }"
+    },
+    {
+      "name": "Tinted Button",
+      "kind": "button",
+      "refersTo": "button-tinted",
+      "description": "次级动作：浅操作蓝底 + 操作蓝字。",
+      "html": "<button class=\"ds-btn-tinted\">查看待整理交易</button>",
+      "css": ".ds-btn-tinted { min-height: 44px; padding: 8px 16px; border: none; border-radius: 8px; background: #eaf3ff; color: #0066cc; font: 600 14px -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif; cursor: pointer; transition: background-color 200ms; } .ds-btn-tinted:hover, .ds-btn-tinted:active { background: #dbeaff; } .ds-btn-tinted:focus-visible { outline: 2px solid #0066cc; outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "最轻的文字动作。",
+      "html": "<button class=\"ds-btn-ghost\">退出登录</button>",
+      "css": ".ds-btn-ghost { min-height: 44px; padding: 10px 16px; border: none; border-radius: 4px; background: transparent; color: #0066cc; font: 600 14px -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif; cursor: pointer; transition: background-color 200ms; } .ds-btn-ghost:hover { background: rgba(0, 102, 204, 0.06); } .ds-btn-ghost:focus-visible { outline: 2px solid #0066cc; outline-offset: 2px; }"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "custom",
+      "refersTo": "segmented-control",
+      "description": "原生 radio 实现的 iOS 分段控件，用于周期切换。",
+      "html": "<div class=\"ds-segment\" role=\"radiogroup\" aria-label=\"周期\"><label class=\"ds-segment-item\"><input type=\"radio\" name=\"ds-p\">今天</label><label class=\"ds-segment-item\"><input type=\"radio\" name=\"ds-p\">本周</label><label class=\"ds-segment-item is-selected\"><input type=\"radio\" name=\"ds-p\" checked>本月</label><label class=\"ds-segment-item\"><input type=\"radio\" name=\"ds-p\">今年</label></div>",
+      "css": ".ds-segment { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; min-height: 44px; min-width: 360px; padding: 2px; border-radius: 8px; background: #e3e3e8; } .ds-segment-item { position: relative; display: flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 12px; border-radius: 4px; color: #3a3a3c; font: 600 13px -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif; cursor: pointer; transition: background-color 200ms, color 200ms; } .ds-segment-item input { position: absolute; opacity: 0; pointer-events: none; } .ds-segment-item.is-selected, .ds-segment-item:has(input:checked) { background: #fff; color: #0066cc; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12); } .ds-segment-item:has(input:focus-visible) { box-shadow: 0 0 0 2px #0066cc; }"
+    },
+    {
+      "name": "Metric Cards",
+      "kind": "card",
+      "refersTo": "metric-card-income",
+      "description": "收入 / 支出 / 余额三种指标卡。",
+      "html": "<div class=\"ds-metrics\"><article class=\"ds-metric ds-metric-income\"><div class=\"ds-metric-head\"><p>本月收入</p><span>+4.2%</span></div><p class=\"ds-metric-value\">¥15,000.00</p></article><article class=\"ds-metric ds-metric-expense\"><div class=\"ds-metric-head\"><p>本月支出</p><span>−1.8%</span></div><p class=\"ds-metric-value\">¥3,268.50</p></article><article class=\"ds-metric ds-metric-balance\"><div class=\"ds-metric-head\"><p>当前余额</p></div><p class=\"ds-metric-value\">¥42,731.50</p></article></div>",
+      "css": ".ds-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif; } .ds-metric { min-width: 0; padding: 14px; border: 1px solid; border-radius: 4px; background: #fff; } .ds-metric-balance { grid-column: 1 / -1; background: #0066cc; border-color: #0066cc; color: #fff; } .ds-metric-income { border-color: #b7ebcc; color: #176b3a; } .ds-metric-expense { border-color: #f5c2c7; color: #b4233c; } .ds-metric-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; } .ds-metric-head p { margin: 0; font-size: 13px; font-weight: 600; color: #6e6e73; } .ds-metric-balance .ds-metric-head p { color: #fff; } .ds-metric-head span { border-radius: 9999px; padding: 4px 8px; font-size: 11px; font-weight: 600; } .ds-metric-income .ds-metric-head span { background: #e8f7ee; } .ds-metric-expense .ds-metric-head span { background: #fdecef; } .ds-metric-value { margin: 8px 0 0; font-size: 24px; font-weight: 700; line-height: 1; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "text-field",
+      "description": "44px 文本输入，聚焦描边变操作蓝。",
+      "html": "<label class=\"ds-field\"><span>备注</span><input placeholder=\"午饭\"></label>",
+      "css": ".ds-field { display: grid; gap: 8px; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif; } .ds-field span { font-size: 13px; font-weight: 600; color: #434653; } .ds-field input { height: 44px; padding: 0 12px; border: 1px solid rgba(115, 119, 132, 0.25); border-radius: 4px; background: #fff; color: #191c1e; font-size: 14px; outline: none; transition: border-color 200ms; } .ds-field input::placeholder { color: #737784; } .ds-field input:focus-visible { border-color: #0066cc; box-shadow: 0 0 0 1px #0066cc; }"
+    },
+    {
+      "name": "Tab Bar",
+      "kind": "nav",
+      "refersTo": "tab-bar",
+      "description": "< 1000px 的 iOS 底部标签栏，六个目的地。",
+      "html": "<nav class=\"ds-tabbar\" aria-label=\"主导航\"><a class=\"ds-tab is-active\" aria-current=\"page\" href=\"#\"><svg viewBox=\"0 0 24 24\" width=\"21\" height=\"21\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/><path d=\"M9 22V12h6v10\"/></svg><span>首页</span></a><a class=\"ds-tab\" href=\"#\"><svg viewBox=\"0 0 24 24\" width=\"21\" height=\"21\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z\"/><path d=\"M16 8H8M16 12H8M13 16H8\"/></svg><span>流水</span></a><a class=\"ds-tab\" href=\"#\"><svg viewBox=\"0 0 24 24\" width=\"21\" height=\"21\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21.21 15.89A10 10 0 1 1 8 2.83\"/><path d=\"M22 12A10 10 0 0 0 12 2v10z\"/></svg><span>报表</span></a><a class=\"ds-tab\" href=\"#\"><svg viewBox=\"0 0 24 24\" width=\"21\" height=\"21\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1\"/><path d=\"M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4\"/></svg><span>账户</span></a></nav>",
+      "css": ".ds-tabbar { display: grid; grid-template-columns: repeat(4, 1fr); height: 64px; align-items: center; background: #fff; border-top: 1px solid rgba(0, 0, 0, 0.1); font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif; } .ds-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 52px; color: #6e6e73; text-decoration: none; transition: color 200ms; } .ds-tab span { font-size: 9px; font-weight: 500; line-height: 10px; } .ds-tab.is-active { color: #0066cc; } .ds-tab:hover { color: #0066cc; } .ds-tab:focus-visible { outline: 2px solid #0066cc; outline-offset: -2px; border-radius: 8px; }"
+    },
+    {
+      "name": "Amount Chip",
+      "kind": "chip",
+      "refersTo": "metric-card-income",
+      "description": "金额方向徽标：颜色 + 正负号双重编码。",
+      "html": "<span class=\"ds-chip ds-chip-in\">+¥25.00 收入</span> <span class=\"ds-chip ds-chip-out\">−¥35.00 支出</span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 9999px; font: 600 12px -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif; } .ds-chip-in { background: #e8f7ee; color: #176b3a; } .ds-chip-out { background: #fdecef; color: #b4233c; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "口袋里的账房 (The Pocket Counting House)",
+    "overview": "xledger 应该像手机自带的系统 App 一样安静、可信：打开就是数字，界面退后。视觉基线是 Apple Human Interface Guidelines：分组浅灰底上放白色内容面，靠发丝线分隔，只有一种操作蓝，金额用固定的收入绿和支出红。不引入 Ionic / Framework7 / Konsta 运行时，这一层是项目自己维护的一小套 Tailwind 样式。\n\n密度保持适中。手机端是\"无框分组页\"：紧凑的导航标题、原生质感的分段控件、两列收支卡加一张整宽余额卡，再往下是分组列表。桌面端（≥ 1000px）保留更宽松的仪表盘构图，加上 230px 侧边栏和紧凑顶栏。两端是同一个世界，只是排布不同。",
+    "keyCharacteristics": [
+      "数字是主角：金额用最大、最重的字号，装饰为零",
+      "唯一操作色 action-blue；绿和红只用来表示钱的方向",
+      "分组浅灰底 + 白色内容面 + 发丝线，阴影克制",
+      "系统字体栈，中文落到 PingFang SC / 微软雅黑",
+      "所有可交互目标 ≥ 44px，四边都处理安全区",
+      "尊重 prefers-reduced-motion"
+    ],
+    "rules": [
+      { "name": "The One Blue Rule", "body": "操作蓝是界面里唯一表示\"可以点\"的颜色。遗留的藏青 #00327d 改到哪里就迁到哪里，不要新增使用。", "section": "colors" },
+      { "name": "The Money Direction Rule", "body": "绿只表示钱进来，红只表示钱出去。颜色永远不能单独承担语义：金额必须同时带正负号或\"收入 / 支出\"文字，让色觉障碍用户和读屏器都能分辨。", "section": "colors" },
+      { "name": "The Quiet Label Rule", "body": "标签用句首大写、正常字距。遗留的 uppercase tracking-[0.14em–0.2em] 小号粗体标签（TextField、SelectField、Chip、PageSection eyebrow）改到哪里就迁到哪里；中文本来就没有大小写，宽字距只会让中文显得松散。", "section": "typography" },
+      { "name": "The Number First Rule", "body": "一屏里最大、最重的字永远是金额，标题不能和数字抢。", "section": "typography" },
+      { "name": "The Hairline Rule", "body": "分隔优先用发丝线和底色差，不用粗边框，也不叠阴影。指标卡用 1px 语义色描边，余额卡用实底，二者都不加阴影。", "section": "elevation" }
+    ],
+    "dos": [
+      "Do 所有可点击的元素都用操作蓝 #0066cc，焦点环统一为 2px #0066cc、偏移 2px。",
+      "Do 页面底色用分组底 #f2f2f7，内容放在白色面上，用发丝线 rgba(0,0,0,0.1) 分隔。",
+      "Do 金额同时带颜色和正负号 / 文字；收入用 #176b3a，支出用 #b4233c。",
+      "Do 所有可交互目标 ≥ 44px，固定在顶部 / 底部的外壳都处理安全区变量。",
+      "Do 每个过渡都加 motion-reduce:transition-none。",
+      "Do 改到遗留组件时，顺手把藏青、大写宽字距标签、extrabold 大标题迁移到本文件的规范。"
+    ],
+    "donts": [
+      "Don't 新增使用藏青 #00327d / #0047ab、primary-gradient 或 bg-primary 系列的遗留 Material 色阶。",
+      "Don't 用 Tailwind 的 emerald-600 / rose-600 给金额上色：emerald-600 对白底只有 3.77:1，正常字号不达 AA；统一改用 income-green / expense-red。",
+      "Don't 用 error 红表示支出，也不要用支出红表示错误。",
+      "Don't 在标签上用全大写和宽字距（tracking-[0.14em] 以上）。",
+      "Don't 引入 Ionic、Framework7、Konsta 之类的移动 UI 运行时；iOS 质感由项目自己的 Tailwind 层实现。",
+      "Don't 卡片圆角超过 8px，也不要给卡片叠阴影来制造层次。"
+    ]
+  }
+}
