@@ -54,7 +54,7 @@ async function captureVisualBaselines(
 ) {
   for (const route of routes) {
     await page.goto(route.path, { waitUntil: 'networkidle' })
-    await expect(page.getByRole('heading', { name: route.heading })).toBeVisible()
+    await expect(page.getByRole('heading', { name: route.heading, exact: true })).toBeVisible()
     await expectNoPageHorizontalOverflow(page)
     if (route.path === '/transactions' && (page.viewportSize()?.width ?? 1000) < 1000) {
       await expectMobileQuickFiltersScrollable(page)

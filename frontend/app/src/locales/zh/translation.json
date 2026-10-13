@@ -112,7 +112,7 @@
     "subtitle": "实时跟踪现金流，按清晰步骤完善你的账本。",
     "income": "收入",
     "expense": "支出",
-    "totalAssets": "当前余额",
+    "totalAssets": "总资产",
     "totalAssetsHint": "来自所有活跃账户余额",
     "monthlyOverview": "月度概览",
     "recentTransactions": "最近交易",

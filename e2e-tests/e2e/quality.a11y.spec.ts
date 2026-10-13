@@ -18,7 +18,7 @@ test.describe('accessibility audit @a11y', () => {
 
       for (const route of appRoutes) {
         await page.goto(route.path, { waitUntil: 'networkidle' })
-        await expect(page.getByRole('heading', { name: route.heading })).toBeVisible()
+        await expect(page.getByRole('heading', { name: route.heading, exact: true })).toBeVisible()
 
         const result = await new AxeBuilder({ page })
           .withTags(['wcag2a', 'wcag2aa'])

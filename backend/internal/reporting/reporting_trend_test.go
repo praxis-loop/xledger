@@ -10,6 +10,10 @@ import (
 	"xledger/backend/internal/classification"
 )
 
+// trendDefaultZone mirrors the service default (UTC+8). Query windows are instants, so tests that rely on
+// the default zone express their day boundaries as local midnight in it.
+var trendDefaultZone = time.FixedZone("UTC+8", 8*3600)
+
 func TestTrend_BasicWindowAggregation(t *testing.T) {
 	ctx := context.Background()
 	ledgerRepo, accountRepo, txnRepo, categoryService, txnService := newTrendFixture(t)
@@ -20,7 +24,7 @@ func TestTrend_BasicWindowAggregation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("seed ledger: %v", err)
 	}
-	base := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	base := time.Date(2026, 3, 1, 0, 0, 0, 0, trendDefaultZone)
 	if _, err := txnService.CreateTransaction(ctx, "user-1", accounting.TransactionCreateInput{LedgerID: ledger.ID, Type: accounting.TransactionTypeIncome, Amount: 100, OccurredAt: base.Add(2 * time.Hour)}); err != nil {
 		t.Fatalf("seed income: %v", err)
 	}
@@ -71,8 +75,8 @@ func TestTrend_MonthAggregation(t *testing.T) {
 	}
 
 	result, err := trend.GetTrend(ctx, "user-1", TrendQuery{
-		From:        time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
-		To:          time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC),
+		From:        time.Date(2026, 1, 1, 0, 0, 0, 0, trendDefaultZone),
+		To:          time.Date(2026, 4, 1, 0, 0, 0, 0, trendDefaultZone),
 		Granularity: "month",
 	})
 	if err != nil {
@@ -115,7 +119,8 @@ func TestTrend_UsesUserTimezoneOrUTC8Default(t *testing.T) {
 		t.Fatalf("expected UTC+8 default bucketing to place income in second day, got %#v", defaultTZ.Points)
 	}
 
-	laTZ, err := trend.GetTrend(ctx, "user-1", TrendQuery{From: time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC), To: time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC), Granularity: "day", Timezone: "America/Los_Angeles"})
+	// From/To are instants: local midnight in Los Angeles (UTC-8 in early March) is 08:00Z.
+	laTZ, err := trend.GetTrend(ctx, "user-1", TrendQuery{From: time.Date(2026, 3, 1, 8, 0, 0, 0, time.UTC), To: time.Date(2026, 3, 3, 8, 0, 0, 0, time.UTC), Granularity: "day", Timezone: "America/Los_Angeles"})
 	if err != nil {
 		t.Fatalf("explicit timezone trend: %v", err)
 	}
@@ -128,8 +133,8 @@ func TestTrend_EmptyWindowReturnsZeroSeries(t *testing.T) {
 	repo := NewRepository(accounting.NewInMemoryAccountRepository(), accounting.NewInMemoryTransactionRepository(), classification.NewCategoryService(classification.NewInMemoryRepository()))
 	trend := NewTrendService(repo, nil)
 
-	from := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
-	to := time.Date(2026, 3, 4, 0, 0, 0, 0, time.UTC)
+	from := time.Date(2026, 3, 1, 0, 0, 0, 0, trendDefaultZone)
+	to := time.Date(2026, 3, 4, 0, 0, 0, 0, trendDefaultZone)
 	result, err := trend.GetTrend(context.Background(), "user-1", TrendQuery{From: from, To: to, Granularity: "day"})
 	if err != nil {
 		t.Fatalf("empty trend query: %v", err)
@@ -154,8 +159,8 @@ func TestTrend_DoesNotServeStaleEmptyCacheAfterTransactionChange(t *testing.T) {
 	if err != nil {
 		t.Fatalf("seed ledger: %v", err)
 	}
-	from := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
-	to := time.Date(2026, 5, 2, 0, 0, 0, 0, time.UTC)
+	from := time.Date(2026, 5, 1, 0, 0, 0, 0, trendDefaultZone)
+	to := time.Date(2026, 5, 2, 0, 0, 0, 0, trendDefaultZone)
 	empty, err := trend.GetTrend(ctx, "user-1", TrendQuery{From: from, To: to, Granularity: "day"})
 	if err != nil {
 		t.Fatalf("empty trend query: %v", err)
@@ -277,4 +282,76 @@ func (r slowTransactionRepo) GetAccountBalanceDeltas(string) (map[string]float64
 func (r slowTransactionRepo) GetTrendStats(_ string, _ accounting.TransactionQuery, _ string, _ *time.Location) ([]accounting.TrendRow, error) {
 	time.Sleep(r.delay)
 	return []accounting.TrendRow{}, nil
+}
+
+func TestTrend_LocalMidnightBoundariesProduceExactDayBuckets(t *testing.T) {
+	ctx := context.Background()
+	ledgerRepo, accountRepo, txnRepo, categoryService, txnService := newTrendFixture(t)
+	trend := NewTrendService(NewRepository(accountRepo, txnRepo, categoryService), nil)
+	ledger, err := ledgerRepo.Create("user-1", accounting.LedgerCreateInput{Name: "Main", IsDefault: true})
+	if err != nil {
+		t.Fatalf("seed ledger: %v", err)
+	}
+	shanghai, _ := time.LoadLocation("Asia/Shanghai")
+	// 2026-05-01 09:00 in Shanghai.
+	if _, err := txnService.CreateTransaction(ctx, "user-1", accounting.TransactionCreateInput{LedgerID: ledger.ID, Type: accounting.TransactionTypeExpense, Amount: 25, OccurredAt: time.Date(2026, 5, 1, 9, 0, 0, 0, shanghai)}); err != nil {
+		t.Fatalf("seed expense: %v", err)
+	}
+
+	// The web client sends local midnight / end of day as UTC instants (Date#toISOString).
+	from := time.Date(2026, 5, 1, 0, 0, 0, 0, shanghai).UTC()
+	to := time.Date(2026, 5, 31, 23, 59, 59, 999_000_000, shanghai).UTC()
+	result, err := trend.GetTrend(ctx, "user-1", TrendQuery{From: from, To: to, Granularity: "day", Timezone: "Asia/Shanghai"})
+	if err != nil {
+		t.Fatalf("trend query: %v", err)
+	}
+	if len(result.Points) != 31 {
+		t.Fatalf("expected 31 day buckets for May, got %d (first %v, last %v)", len(result.Points), result.Points[0].BucketStart, result.Points[len(result.Points)-1].BucketStart)
+	}
+	first := result.Points[0].BucketStart.In(shanghai)
+	if first.Month() != time.May || first.Day() != 1 {
+		t.Fatalf("expected first bucket on May 1, got %v", first)
+	}
+	if result.Points[0].Expense != 25 {
+		t.Fatalf("expected May 1 expense in first bucket, got %#v", result.Points[0])
+	}
+}
+
+func TestTrend_DayBucketsSurviveDaylightSavingSwitch(t *testing.T) {
+	ctx := context.Background()
+	ledgerRepo, accountRepo, txnRepo, categoryService, txnService := newTrendFixture(t)
+	trend := NewTrendService(NewRepository(accountRepo, txnRepo, categoryService), nil)
+	ledger, err := ledgerRepo.Create("user-1", accounting.LedgerCreateInput{Name: "Main", IsDefault: true})
+	if err != nil {
+		t.Fatalf("seed ledger: %v", err)
+	}
+	la, _ := time.LoadLocation("America/Los_Angeles")
+	// US daylight saving starts 2026-03-08; this expense is after the switch.
+	if _, err := txnService.CreateTransaction(ctx, "user-1", accounting.TransactionCreateInput{LedgerID: ledger.ID, Type: accounting.TransactionTypeExpense, Amount: 42, OccurredAt: time.Date(2026, 3, 10, 12, 0, 0, 0, la)}); err != nil {
+		t.Fatalf("seed expense: %v", err)
+	}
+
+	from := time.Date(2026, 3, 1, 0, 0, 0, 0, la).UTC()
+	to := time.Date(2026, 3, 31, 23, 59, 59, 999_000_000, la).UTC()
+	result, err := trend.GetTrend(ctx, "user-1", TrendQuery{From: from, To: to, Granularity: "day", Timezone: "America/Los_Angeles"})
+	if err != nil {
+		t.Fatalf("trend query: %v", err)
+	}
+	if len(result.Points) != 31 {
+		t.Fatalf("expected 31 day buckets for March, got %d", len(result.Points))
+	}
+	var total float64
+	for _, p := range result.Points {
+		local := p.BucketStart.In(la)
+		if local.Hour() != 0 {
+			t.Fatalf("bucket %v does not start at local midnight", local)
+		}
+		total += p.Expense
+	}
+	if day10 := result.Points[9]; day10.BucketStart.In(la).Day() != 10 || day10.Expense != 42 {
+		t.Fatalf("expected the March 10 expense in the March 10 bucket, got %#v", day10)
+	}
+	if total != 42 {
+		t.Fatalf("expected no data lost across the DST switch, total expense %v", total)
+	}
 }

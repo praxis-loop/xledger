@@ -13,7 +13,7 @@ database_url: postgres://xledger:xledger_secret@127.0.0.1:5432/xledger?sslmode=d
 redis_url: redis://127.0.0.1:6379/0
 
 gin_mode: release
-enable_dev_login: true
+enable_dev_login: false
 n8n_base_url: http://127.0.0.1:5678
 
 api_addr: ":8080"

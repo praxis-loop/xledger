@@ -139,7 +139,7 @@ function LedgerNameDialog({ state, onClose }: { state: Exclude<LedgerDialogState
           label={t('settingsPage.ledgers.name')}
           value={name}
           onChange={(event) => setName(event.target.value)}
-          maxLength={40}
+          maxLength={60}
           required
           autoComplete="off"
           error={submitted && !trimmed ? t('settingsPage.ledgers.nameRequired') : undefined}

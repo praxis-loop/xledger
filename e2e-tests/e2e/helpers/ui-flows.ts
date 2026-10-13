@@ -27,28 +27,34 @@ export async function bootstrapAuthedSession(page: Page, testInfo: TestInfo): Pr
   return { apiClient, session }
 }
 
+// Page content can contain links whose accessible names include nav labels (e.g. an account row's
+// "View transactions"), so navigation helpers only look inside the primary navigation.
+function primaryNav(page: Page) {
+  return page.getByRole('navigation', { name: 'Primary' })
+}
+
 export async function openAccounts(page: Page) {
-  await page.getByRole('link', { name: 'Accounts' }).click()
+  await primaryNav(page).getByRole('link', { name: 'Accounts', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Accounts', exact: true })).toBeVisible()
 }
 
 export async function openTransactions(page: Page) {
-  await page.getByRole('link', { name: 'Transactions' }).click()
-  await expect(page.getByRole('heading', { name: 'Transactions' })).toBeVisible()
+  await primaryNav(page).getByRole('link', { name: 'Transactions', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Transactions', exact: true })).toBeVisible()
 }
 
 export async function openDashboard(page: Page) {
-  await page.getByRole('link', { name: 'Dashboard' }).click()
+  await primaryNav(page).getByRole('link', { name: 'Dashboard', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Financial Overview' })).toBeVisible()
 }
 
 export async function openAnalytics(page: Page) {
-  await page.getByRole('link', { name: 'Analytics' }).click()
-  await expect(page.getByRole('heading', { name: 'Analytics' })).toBeVisible()
+  await primaryNav(page).getByRole('link', { name: 'Analytics', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Analytics', exact: true })).toBeVisible()
 }
 
 export async function openSettings(page: Page) {
-  await page.getByRole('link', { name: 'Settings' }).click()
+  await primaryNav(page).getByRole('link', { name: 'Settings', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
 }
 

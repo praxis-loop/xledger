@@ -1368,8 +1368,10 @@ describe('transactions domain', () => {
   it('opens a reviewed transaction day from the review queue', async () => {
     const fetchMock = createTransactionsFetchMock()
     global.fetch = fetchMock as typeof fetch
-    const expectedFrom = new Date(2026, 2, 3, 0, 0, 0, 0).toISOString()
-    const expectedTo = new Date(2026, 2, 3, 23, 59, 59, 999).toISOString()
+    // The day to open is the transaction's local calendar day (it can differ from the UTC date in UTC+13/+14).
+    const occurred = new Date('2026-03-03T10:30:00Z')
+    const expectedFrom = new Date(occurred.getFullYear(), occurred.getMonth(), occurred.getDate(), 0, 0, 0, 0).toISOString()
+    const expectedTo = new Date(occurred.getFullYear(), occurred.getMonth(), occurred.getDate(), 23, 59, 59, 999).toISOString()
 
     renderTransactionsApp(['/transactions'])
     const user = userEvent.setup()

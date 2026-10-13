@@ -45,7 +45,7 @@ export function InlineNameForm({ label, submitLabel, initialValue = '', pending 
           autoFocus
           value={value}
           placeholder={label}
-          maxLength={40}
+          maxLength={60}
           onChange={(event) => setValue(event.target.value)}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}

@@ -45,7 +45,10 @@ test('classification flow: category/tag usage and CSV export', async ({ page, re
   const stat = categoryStats.items.find((item) => item.category_name === categoryName)
   expect(stat).toBeTruthy()
   expect(stat?.amount).toBeCloseTo(333, 2)
-  expect(exportedCsv).toContain('occurred_at,amount,type,category_name')
+  const csvHeader = exportedCsv.split('\n')[0].split(',')
+  for (const column of ['occurred_at', 'amount', 'type', 'category_name']) {
+    expect(csvHeader).toContain(column)
+  }
   expect(exportedCsv).toContain(',333,expense,')
   expect(exportedCsv).toContain(categoryName)
 

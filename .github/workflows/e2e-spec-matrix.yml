@@ -10,7 +10,7 @@ on:
       - ".github/workflows/e2e-spec-matrix.yml"
   push:
     branches:
-      - main
+      - prd
     paths:
       - "frontend/**"
       - "backend/**"
@@ -18,11 +18,61 @@ on:
       - "e2e-tests/**"
       - ".github/workflows/e2e-spec-matrix.yml"
   workflow_dispatch:
+    inputs:
+      update_visual_snapshots:
+        description: "Regenerate visual-regression baselines and upload them as an artifact"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 jobs:
+  unit-tests:
+    name: "unit (${{ matrix.tz }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # The product timezone plus one west of UTC: date bucketing bugs only show up on the other side.
+        tz: [Asia/Shanghai, America/Los_Angeles]
+    env:
+      TZ: ${{ matrix.tz }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Backend tests
+        working-directory: backend
+        run: go test ./... -count=1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: frontend/app/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        working-directory: frontend/app
+        run: pnpm install --frozen-lockfile
+
+      - name: Frontend typecheck and tests
+        working-directory: frontend/app
+        run: pnpm run check
+
   e2e-by-spec:
     name: "e2e (${{ matrix.spec }})"
     runs-on: ubuntu-latest
@@ -112,7 +162,15 @@ jobs:
 
       - name: Run e2e spec
         working-directory: e2e-tests
-        run: pnpm run ${{ matrix.script }}
+        run: pnpm run ${{ (matrix.spec == 'quality-visual' && inputs.update_visual_snapshots) && 'e2e:visual:update' || matrix.script }}
+
+      - name: Upload regenerated visual baselines
+        if: ${{ matrix.spec == 'quality-visual' && inputs.update_visual_snapshots }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-baselines
+          path: e2e-tests/e2e/quality.visual.spec.ts-snapshots
+          retention-days: 7
 
       - name: Dump deploy logs on failure
         if: failure()
